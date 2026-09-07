@@ -1,0 +1,25 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "덕수궁 인근 매장문화재 유존구역",
+        "riskLevel": "🔴 위험 (발굴조사 필수)",
+        "description": "조선시대 성곽 및 유물 출토 이력 있음. 굴착 공사 전 필수 시굴 필요."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [126.974, 37.565],
+            [126.978, 37.565],
+            [126.978, 37.5675],
+            [126.974, 37.5675],
+            [126.974, 37.565]
+          ]
+        ]
+      }
+    }
+  ]
+}
