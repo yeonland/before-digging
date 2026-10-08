@@ -50,6 +50,43 @@
             box-sizing: border-box;
         }
 
+        /* 주소 검색 결과 목록 */
+        #search-results {
+            max-width: 420px;
+            margin: 6px 0 0 0;
+            padding: 0;
+            list-style: none;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }
+        #search-results li + li {
+            border-top: 1px solid #eee;
+        }
+        #search-results button {
+            display: block;
+            width: 100%;
+            padding: 8px 10px;
+            border: 0;
+            background: none;
+            text-align: left;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        #search-results button:hover {
+            background: #f3f7fb;
+        }
+        #search-results button span {
+            display: block;
+            color: #666;
+            font-size: 12px;
+        }
+        #search-results .search-message {
+            padding: 8px 10px;
+            color: #666;
+            font-size: 13px;
+        }
+
         /* 진단 결과 패널 */
         #result-panel {
             max-width: 720px;
@@ -155,7 +192,7 @@
         <input
             type="text"
             id="address-input"
-            placeholder="예:서울시청 또는 서울시 종로구"
+            placeholder="지번, 도로명 또는 장소 (예: 경주시 인왕동 815-1)"
             style="width: 300px; padding: 8px; font-size: 14px;"
         >
         <button
@@ -164,6 +201,8 @@
         >
             검색
         </button>
+        <!-- 검색 결과가 여러 개일 때 고르는 목록 -->
+        <ul id="search-results" hidden></ul>
     </div>
 
     <!-- 진단 결과 패널: 필지를 누르면 해야 할 일과 비용 안내 표시 -->
@@ -425,37 +464,62 @@
             }
         });
 
+        // 주소·장소 검색 (VWorld 검색 API, 지번·도로명·장소 이름)
+        const searchResults = document.getElementById('search-results');
+
+        function showSearchMessage(message) {
+            searchResults.innerHTML = `<li class="search-message">${escapeHtml(message)}</li>`;
+            searchResults.hidden = false;
+        }
+
+        // 검색 결과로 이동해서 바로 필지 진단
+        function goToResult(result) {
+            searchResults.hidden = true;
+            const latlng = L.latLng(result.lat, result.lng);
+            map.setView(latlng, 18);
+            diagnose(latlng);
+        }
+
         document.getElementById('search-btn').addEventListener('click', function() {
-            const keyword = document.getElementById('address-input').value;
-            
-            if (!keyword) {
-                alert("검색할 주소를 입력해주세요!");
+            const keyword = addressInput.value.trim();
+
+            if (keyword.length < 2) {
+                showSearchMessage('주소나 장소 이름을 2글자 이상 입력해 주세요.');
                 return;
             }
 
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(keyword)}`;
+            showSearchMessage('검색 중...');
 
-            fetch(url)
-                .then(response => response.json())
+            fetch(`/api/search?query=${encodeURIComponent(keyword)}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('주소 검색 실패');
+                    return response.json();
+                })
                 .then(data => {
-                    if (data && data.length > 0) {
-                        const lat = parseFloat(data[0].lat);
-                        const lon = parseFloat(data[0].lon);
-
-                        console.log("검색된 좌표:", lat, lon);
-
-                        map.setView([lat, lon], 17);
-
-                        placeMarker([lat, lon])
-                            .bindPopup(`<b>검색 결과:</b><br>${escapeHtml(data[0].display_name)}`)
-                            .openPopup();
-                    } else {
-                        alert("해당 주소를 찾을 수 없습니다. 다른 검색어로 시도해 보세요!");
+                    if (data.results.length === 0) {
+                        showSearchMessage('찾는 주소가 없어요. 지번(예: 경주시 인왕동 815-1)이나 도로명(예: 세종대로 110)으로 검색해 보세요.');
+                        return;
                     }
+                    if (data.results.length === 1) {
+                        goToResult(data.results[0]);
+                        return;
+                    }
+
+                    searchResults.innerHTML = '';
+                    data.results.forEach(result => {
+                        const item = document.createElement('li');
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.innerHTML = `<b>${escapeHtml(result.label)}</b>${result.sub ? `<span>${escapeHtml(result.sub)}</span>` : ''}`;
+                        button.addEventListener('click', () => goToResult(result));
+                        item.appendChild(button);
+                        searchResults.appendChild(item);
+                    });
+                    searchResults.hidden = false;
                 })
                 .catch(error => {
-                    console.error("주소 검색 중 에러 발생:", error);
-                    alert("주소 검색에 실패했습니다.");
+                    console.error('주소 검색 오류:', error);
+                    showSearchMessage('주소 검색에 실패했어요. 잠시 후 다시 시도해 주세요.');
                 });
         });
 
@@ -467,7 +531,11 @@
         }
 
         map.on('click', function(e) {
-            const clickedLatlng = e.latlng;
+            diagnose(e.latlng);
+        });
+
+        // 한 지점의 필지를 진단 (지도 클릭, 주소 검색에서 사용)
+        function diagnose(clickedLatlng) {
             // 응답이 늦게 와도 이 클릭의 핀에만 결과를 넣도록 지역 변수로 보관
             const clickMarker = placeMarker(clickedLatlng);
             clickMarker.bindPopup('필지와 국가유산 데이터 확인 중...', { maxWidth: 320 }).openPopup();
@@ -500,7 +568,7 @@
                     console.error('진단 오류:', error);
                     clickMarker.setPopupContent('국가유산 데이터를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
                 });
-        });
+        }
 
         function formatArea(value) {
             return `${value.toLocaleString('ko-KR')}㎡`;
