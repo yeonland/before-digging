@@ -69,7 +69,8 @@
                 transparent: true,
                 crs: L.CRS.EPSG3857,
 
-                minZoom: 11,
+                // VWorld는 줌 17 미만에서 빈 이미지를 보내므로 17부터 요청
+                minZoom: 17,
                 maxZoom: 19
             }
         ).addTo(map);
@@ -80,6 +81,28 @@
         };
         L.control.layers(null, overlayMaps).addTo(map);
 
+        // 지적도가 켜져 있는데 줌이 부족하면 안내 문구 표시
+        const CADASTRAL_MIN_ZOOM = 17;
+        const zoomHint = L.control({ position: 'bottomleft' });
+        zoomHint.onAdd = function() {
+            const div = L.DomUtil.create('div');
+            div.style.cssText = 'background: white; padding: 6px 10px; font-size: 13px; border-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.3);';
+            div.textContent = '지적도는 더 확대하면 표시됩니다.';
+            return div;
+        };
+
+        function updateZoomHint() {
+            const needsZoom = map.hasLayer(cadastralLayer) && map.getZoom() < CADASTRAL_MIN_ZOOM;
+            if (needsZoom) {
+                zoomHint.addTo(map);
+            } else {
+                zoomHint.remove();
+            }
+        }
+
+        map.on('zoomend overlayadd overlayremove', updateZoomHint);
+        updateZoomHint();
+
         // 브라우저의 Geolocation 기능 지원 확인
         if ("geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition(
@@ -89,8 +112,8 @@
 
                     console.log("내 위치:", lat, lng);
 
-                    // 지도의 중심을 내 위치로 이동 (줌 레벨 15)
-                    map.setView([lat, lng], 15);
+                    // 지도의 중심을 내 위치로 이동 (지적도가 보이는 줌 레벨 17)
+                    map.setView([lat, lng], 17);
 
                     // 내 위치에 마커 꽂기
                     const marker = L.marker([lat, lng]).addTo(map);
@@ -138,7 +161,7 @@
 
                         console.log("검색된 좌표:", lat, lon);
 
-                        map.setView([lat, lon], 16);
+                        map.setView([lat, lon], 17);
 
                         const searchMarker = L.marker([lat, lon]).addTo(map);
                         searchMarker.bindPopup(`<b>검색 결과:</b><br>${data[0].display_name}`).openPopup();
