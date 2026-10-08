@@ -30,11 +30,24 @@ function formatDate(yyyymmdd) {
         : yyyymmdd || '-';
 }
 
+// 실패 이유가 GitHub 실행 요약에 보이도록 오류 주석으로 남기고 종료 (인증값은 가림)
+process.on('uncaughtException', (error) => {
+    const message = String((error && error.message) || error).replaceAll(oc, '***').replace(/\s+/g, ' ');
+    console.log(`::error title=법령 확인 실패::${message}`);
+    process.exit(1);
+});
+
 async function searchLaws(query) {
     const params = new URLSearchParams({ OC: oc, target: 'law', type: 'JSON', query, display: '100' });
-    const response = await fetch(`https://www.law.go.kr/DRF/lawSearch.do?${params}`, {
-        headers: { Referer: REGISTERED_DOMAIN }
-    });
+    let response;
+    try {
+        response = await fetch(`https://www.law.go.kr/DRF/lawSearch.do?${params}`, {
+            headers: { Referer: REGISTERED_DOMAIN }
+        });
+    } catch (error) {
+        const reason = error.cause ? error.cause.code || error.cause.message : error.message;
+        throw new Error(`법령 API에 연결하지 못했습니다: ${reason}`);
+    }
     const text = await response.text();
 
     let body;
