@@ -101,8 +101,33 @@
             box-shadow: 0 1px 4px rgba(0,0,0,0.3);
         }
         .map-legend .legend-title {
-            font-weight: bold;
+            display: block;
+            width: 100%;
             margin-bottom: 2px;
+            padding: 0;
+            border: 0;
+            background: none;
+            font: inherit;
+            font-weight: bold;
+            text-align: left;
+            cursor: pointer;
+        }
+        .map-legend.is-collapsed .legend-items {
+            display: none;
+        }
+        .map-legend.is-collapsed .legend-title {
+            margin-bottom: 0;
+        }
+        .map-legend.is-collapsed .legend-arrow {
+            display: inline-block;
+            transform: rotate(-90deg);
+        }
+
+        /* 터치 화면에서는 두 손가락으로 확대·축소하므로 +/- 버튼 숨김 */
+        @media (pointer: coarse) {
+            .leaflet-control-zoom {
+                display: none;
+            }
         }
         /* 내 위치 버튼 */
         .locate-button {
@@ -404,13 +429,25 @@
         legend.onAdd = function() {
             const div = L.DomUtil.create('div', 'map-legend');
             div.innerHTML = `
-                <div class="legend-title">범례</div>
-                <div><span class="swatch" style="background: #ffff4d; border: 1px solid #c9c900;"></span>국가·시도 지정유산 구역</div>
-                <div><span class="swatch" style="background: repeating-linear-gradient(135deg, #4bb3e8 0 2px, #fff 2px 4px);"></span>보호구역</div>
-                <div><span class="swatch" style="border: 2px solid #4caf50;"></span>역사문화환경 보존지역</div>
-                <div><span class="swatch" style="background: rgba(157, 78, 221, 0.25); border: 1.5px solid #7b2cbf;"></span>문화유적 분포 범위</div>
-                <div><span class="swatch" style="border: 1.5px solid #e8a33d;"></span>지적도(필지 경계)</div>
+                <button type="button" class="legend-title" aria-expanded="true">범례 <span class="legend-arrow">▾</span></button>
+                <div class="legend-items">
+                    <div><span class="swatch" style="background: #ffff4d; border: 1px solid #c9c900;"></span>국가·시도 지정유산 구역</div>
+                    <div><span class="swatch" style="background: repeating-linear-gradient(135deg, #4bb3e8 0 2px, #fff 2px 4px);"></span>보호구역</div>
+                    <div><span class="swatch" style="border: 2px solid #4caf50;"></span>역사문화환경 보존지역</div>
+                    <div><span class="swatch" style="background: rgba(157, 78, 221, 0.25); border: 1.5px solid #7b2cbf;"></span>문화유적 분포 범위</div>
+                    <div><span class="swatch" style="border: 1.5px solid #e8a33d;"></span>지적도(필지 경계)</div>
+                </div>
             `;
+
+            // 제목을 누르면 접고 펼침. 휴대폰처럼 좁은 화면에서는 접힌 채로 시작
+            const toggle = div.querySelector('.legend-title');
+            const setOpen = (open) => {
+                div.classList.toggle('is-collapsed', !open);
+                toggle.setAttribute('aria-expanded', String(open));
+            };
+            setOpen(!window.matchMedia('(max-width: 600px)').matches);
+            L.DomEvent.disableClickPropagation(div);
+            L.DomEvent.on(toggle, 'click', () => setOpen(div.classList.contains('is-collapsed')));
             return div;
         };
         legend.addTo(map);
@@ -676,8 +713,11 @@
                 ? `${escapeHtml(item.name)} <span style="color: #666;">(${escapeHtml(item.type)})</span>`
                 : escapeHtml(item.type);
             const listItem = item => `<li>${itemLabel(item)} · ${formatArea(item.overlapArea)} (${item.overlapRatio}%)</li>`;
+            // 팝업이 지도를 너무 가리지 않게 많이 겹친 3개만 보여주고 나머지는 건수로 표시
+            const POPUP_ITEM_LIMIT = 3;
+            const hiddenCount = realItems.length - POPUP_ITEM_LIMIT;
             const realList = realItems.length > 0
-                ? `<ul style="margin: 5px 0 0 0; padding-left: 18px; font-size: 13px;">${realItems.map(listItem).join('')}</ul>`
+                ? `<ul style="margin: 5px 0 0 0; padding-left: 18px; font-size: 13px;">${realItems.slice(0, POPUP_ITEM_LIMIT).map(listItem).join('')}${hiddenCount > 0 ? `<li style="list-style: none; color: #666;">외 ${hiddenCount}건</li>` : ''}</ul>`
                 : '';
             const edgeList = edgeItems.length > 0
                 ? `<p style="margin: 6px 0 0 0; font-size: 12px; color: #666;">경계에만 걸침 (도면 오차일 수 있음): ${edgeItems.map(item => escapeHtml(item.name || item.type)).join(', ')}</p>`
