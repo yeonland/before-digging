@@ -142,10 +142,41 @@
             });
         }
 
-        // 6. 비용
+        // 6. 이 필지에 걸친 조사 기록 (국가유산조사구역)
+        const onParcel = (result.surveys || []).filter((survey) => survey.distance === 0);
+        const pastExcavations = onParcel.filter((survey) => survey.kind === 'excavation');
+        const surfaceSites = onParcel.filter((survey) => survey.kind === 'surfaceSite');
+
+        if (surfaceSites.length > 0 && !area.inSites) {
+            steps.push({
+                level: 'check',
+                title: '지표조사에서 유적이 확인된 범위에 걸쳐요',
+                body: `'${surfaceSites[0].name}' 범위에 걸쳐 있어요. 국가유산청이 검토한 조사 보고서에 매장유산이 있다고 표시된 지역이면 매장유산 유존지역에 해당해 영향진단 대상이 될 수 있어요. 관할 시·군·구에 확인해 보세요.`,
+                law: `${LAW.remainsRange} (유존지역 범위), ${LAW.diagnosisRemains}`
+            });
+        }
+
+        if (pastExcavations.length > 0) {
+            // 조사명에 이 필지 지번(예: 815-1)이 들어간 기록을 먼저, 그다음 최근 조사 순
+            const parcelNo = ((result.parcel && result.parcel.jibun) || '').split(' ')[0];
+            const mentionsParcel = (survey) =>
+                parcelNo !== '' && new RegExp(`(^|[^\\d-])${parcelNo}(번지|[^\\d-]|$)`).test(survey.name);
+            const [main] = [...pastExcavations].sort((a, b) =>
+                (mentionsParcel(b) - mentionsParcel(a)) || ((b.year || 0) - (a.year || 0))
+            );
+            const others = pastExcavations.length - 1;
+            steps.push({
+                level: 'info',
+                title: '이 필지에 예전 조사 기록이 있어요',
+                body: `필지에 걸친 ${main.method} 기록이 있어요: '${main.name}'${main.year ? ` (${main.year}년)` : ''}${others > 0 ? ` 외 ${others}건` : ''}. 예전 조사 결과에 따라 필요한 절차가 달라질 수 있으니, 보고서 내용을 확인하고 관할 시·군·구에 문의해 보세요. 조사 목록은 아래 "주변 조사 이력"에서 볼 수 있어요.`,
+                law: null
+            });
+        }
+
+        // 7. 비용
         const cost = needsDiagnosis || area.inHistoricEnv ? buildCost(input) : null;
 
-        // 7. 공통 주의사항
+        // 8. 공통 주의사항
         const notes = [];
         if (needsDiagnosis) {
             notes.push({

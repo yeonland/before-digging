@@ -2,11 +2,12 @@
 // - parcel: VWorld 연속지적도(LP_PA_CBND_BUBUN)
 // - zones: VWorld 국가유산 지정/보호구역(lt_c_uo301)
 // - sites: 국가유산청 문화유적분포지도
+// - surveys: 국가유산청 국가유산조사구역 (주변 발굴·시굴·지표조사 이력)
 const { area } = require('@turf/area');
 const { feature, featureCollection } = require('@turf/helpers');
 const { intersect } = require('@turf/intersect');
 const { union } = require('@turf/union');
-const { fetchSites, isPointInGeometry } = require('./_heritage-gis');
+const { fetchSites, fetchSurveys, isPointInGeometry } = require('./_heritage-gis');
 
 // 이보다 작은 겹침은 무시 (㎡)
 const MIN_OVERLAP_AREA = 1;
@@ -15,6 +16,8 @@ const EDGE_OVERLAP_AREA = 10;
 // 주변 문화유적을 찾는 반경과 최대 표시 개수 (법적 기준이 아닌 참고용)
 const NEARBY_RADIUS = 500;
 const NEARBY_LIMIT = 5;
+// 주변 조사 이력 최대 표시 개수
+const SURVEY_LIMIT = 10;
 
 // 필지 주변 좁은 범위라 평면으로 근사해 미터 단위 좌표로 바꿈
 function toMeters([lng, lat], origin) {
@@ -203,14 +206,17 @@ module.exports = async function handler(req, res) {
     const latPad = NEARBY_RADIUS / 110540;
     const lngPad = NEARBY_RADIUS / (111320 * Math.cos((minLat * Math.PI) / 180));
 
-    const [zonesResult, sitesResult] = await Promise.allSettled([
+    const nearbyBbox = [minLng - lngPad, minLat - latPad, maxLng + lngPad, maxLat + latPad];
+
+    const [zonesResult, sitesResult, surveysResult] = await Promise.allSettled([
         fetchVworldFeatures(
             'LT_C_UO301',
             `BOX(${minLng},${minLat},${maxLng},${maxLat})`,
             apiKey,
             registeredDomain
         ),
-        fetchSites([minLng - lngPad, minLat - latPad, maxLng + lngPad, maxLat + latPad], 1000)
+        fetchSites(nearbyBbox, 1000),
+        fetchSurveys(nearbyBbox, 1000)
     ]);
 
     if (zonesResult.status === 'rejected') {
@@ -218,6 +224,9 @@ module.exports = async function handler(req, res) {
     }
     if (sitesResult.status === 'rejected') {
         console.error('문화유적분포지도 조회 오류:', sitesResult.reason);
+    }
+    if (surveysResult.status === 'rejected') {
+        console.error('국가유산조사구역 조회 오류:', surveysResult.reason);
     }
 
     const zones = zonesResult.status === 'fulfilled'
@@ -231,17 +240,21 @@ module.exports = async function handler(req, res) {
         )
         : null;
 
-    // 문화유적마다 필지까지 거리를 재서, 닿는 것(0m)은 겹침 계산으로, 나머지는 주변 유적으로 나눔
+    // 필지와 도형 사이 거리(m). 한쪽이 다른 쪽에 걸치거나 품으면 0
     const origin = [minLng, minLat];
+    const distanceToParcel = (geometry) =>
+        containsAnyVertex(parcelFeature.geometry, geometry) ||
+        containsAnyVertex(geometry, parcelFeature.geometry)
+            ? 0
+            : getDistance(parcelFeature.geometry, geometry, origin);
+
+    // 문화유적마다 필지까지 거리를 재서, 닿는 것(0m)은 겹침 계산으로, 나머지는 주변 유적으로 나눔
     const measuredSites = sitesResult.status === 'fulfilled'
         ? sitesResult.value.map((site) => ({
             name: site.properties.name,
             mapNo: site.properties.mapNo,
             geometry: site.geometry,
-            distance: containsAnyVertex(parcelFeature.geometry, site.geometry) ||
-                containsAnyVertex(site.geometry, parcelFeature.geometry)
-                ? 0
-                : getDistance(parcelFeature.geometry, site.geometry, origin)
+            distance: distanceToParcel(site.geometry)
         }))
         : null;
 
@@ -264,6 +277,27 @@ module.exports = async function handler(req, res) {
             .slice(0, NEARBY_LIMIT)
             .map((site) => ({ name: site.name, mapNo: site.mapNo, distance: Math.round(site.distance) }))
         : null;
+
+    // 주변 조사 이력: 500m 안의 조사구역을 가까운 순으로 (같은 이름·종류는 하나만)
+    let surveys = null;
+    if (surveysResult.status === 'fulfilled') {
+        const byKey = new Map();
+        surveysResult.value
+            .map((survey) => ({ ...survey, distance: distanceToParcel(survey.geometry) }))
+            .filter((survey) => survey.distance <= NEARBY_RADIUS)
+            .forEach((survey) => {
+                const key = `${survey.kind}|${survey.name}`;
+                const prev = byKey.get(key);
+                if (!prev || survey.distance < prev.distance) byKey.set(key, survey);
+            });
+        surveys = [...byKey.values()]
+            .sort((a, b) => a.distance - b.distance)
+            .slice(0, SURVEY_LIMIT)
+            .map(({ geometry, distance, ...survey }) => ({
+                ...survey,
+                distance: distance < 1 ? 0 : Math.round(distance)
+            }));
+    }
 
     // 응답에는 도형 대신 겹친 면적만 넣음
     const toResult = (items) => items && items.map(({ geometry, overlap, ...rest }) => ({
@@ -300,6 +334,7 @@ module.exports = async function handler(req, res) {
         zones: toResult(zones),
         sites: toResult(sites),
         nearbySites,
+        surveys,
         overlap: {
             area: roundArea(totalArea),
             ratio: roundArea((totalArea / parcelArea) * 100),

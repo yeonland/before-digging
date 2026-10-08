@@ -123,6 +123,22 @@
             margin: 0;
             padding-left: 18px;
         }
+        #result-panel ul.surveys li {
+            margin-bottom: 6px;
+        }
+        .survey-method {
+            display: inline-block;
+            padding: 0 6px;
+            margin-right: 4px;
+            border-radius: 3px;
+            background: #eef3f8;
+            color: #1d72b8;
+            font-size: 12px;
+        }
+        .survey-report {
+            color: #666;
+            font-size: 12px;
+        }
         #result-panel .disclaimer {
             margin: 14px 0 0 0;
             font-size: 12px;
@@ -155,7 +171,7 @@
 
     <!-- 데이터 출처 표시 -->
     <p id="data-source" style="margin: 0 0 10px 0; font-size: 12px; color: #666;">
-        출처: 국가유산청 국가유산 공간정보서비스(문화유적분포지도), 국토교통부 브이월드(국가유산 지정/보호구역, 지적도), OpenStreetMap
+        출처: 국가유산청 국가유산 공간정보서비스(문화유적분포지도, 국가유산조사구역), 국토교통부 브이월드(국가유산 지정/보호구역, 지적도), OpenStreetMap
     </p>
 
     <!-- 3. Leaflet 자바스크립트 불러오기 -->
@@ -535,6 +551,10 @@
             const nearestLine = nearest
                 ? `<p style="margin: 6px 0 0 0; font-size: 12px; color: #666;">가장 가까운 문화유적: ${escapeHtml(nearest.name)} · 약 ${nearest.distance}m</p>`
                 : '';
+            const surveyCount = (data.surveys || []).length;
+            const surveyLine = surveyCount > 0
+                ? `<p style="margin: 2px 0 0 0; font-size: 12px; color: #666;">주변 500m 조사 이력 ${surveyCount}건${surveyCount >= 10 ? ' 이상' : ''}</p>`
+                : '';
 
             let title;
             let summary;
@@ -560,6 +580,7 @@
                     ${realList}
                     ${edgeList}
                     ${nearestLine}
+                    ${surveyLine}
                     ${failNote}
                     <p style="margin: 6px 0 0 0; font-size: 12px; color: #1d72b8;">▼ 지도 아래에서 해야 할 일을 확인하세요.</p>
                 </div>
@@ -656,6 +677,23 @@
                     : '<p class="panel-sub">500m 안에 문화유적 분포 범위가 없어요.</p>'}
                 <p class="disclaimer" style="margin-top: 4px;">필지 경계에서 각 유적 분포 범위 경계까지의 가장 짧은 거리예요. 이미 필지와 겹치는 유적은 빼고 가까운 5곳만 보여줘요.</p>`;
 
+            const surveys = lastParcelResult.surveys;
+            const surveyItem = survey => `
+                <li>
+                    <span class="survey-method">${escapeHtml(survey.method)}</span>
+                    ${escapeHtml(survey.name || '이름 없음')} ·
+                    ${survey.distance === 0 ? '<b>필지에 걸침</b>' : `약 ${survey.distance}m`}${survey.year ? ` · ${survey.year}년` : ''}
+                    ${survey.report ? `<div class="survey-report">${escapeHtml(survey.report)}</div>` : ''}
+                </li>`;
+            const surveySection = surveys === null || surveys === undefined
+                ? ''
+                : `
+                <h4>주변 조사 이력 (500m 이내)</h4>
+                ${surveys.length > 0
+                    ? `<ul class="notes surveys">${surveys.map(surveyItem).join('')}</ul>`
+                    : '<p class="panel-sub">500m 안에 등록된 조사 기록이 없어요.</p>'}
+                <p class="disclaimer" style="margin-top: 4px;">국가유산청 국가유산조사구역 자료예요. 가까운 순으로 최대 10건을 보여주고, 조사 종류와 연도는 보고서 이름에서 읽어낸 거라 실제와 다를 수 있어요.</p>`;
+
             const notes = guidance.notes.map(note => `
                 <li>${escapeHtml(note.text)} ${lawDetails(note.law)}</li>`).join('');
 
@@ -668,6 +706,7 @@
                 ${steps}
                 ${cost}
                 ${nearby}
+                ${surveySection}
                 <h4>알아두세요</h4>
                 <ul class="notes">${notes}</ul>
                 ${incomplete}
