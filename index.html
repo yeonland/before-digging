@@ -49,6 +49,85 @@
             vertical-align: middle;
             box-sizing: border-box;
         }
+
+        /* 진단 결과 패널 */
+        #result-panel {
+            max-width: 720px;
+            margin: 0 0 12px 0;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        #result-panel h3 {
+            margin: 0 0 4px 0;
+            font-size: 16px;
+        }
+        #result-panel h4 {
+            margin: 14px 0 6px 0;
+            font-size: 14px;
+        }
+        #result-panel .panel-sub {
+            margin: 0;
+            color: #666;
+            font-size: 13px;
+        }
+        #result-panel .inputs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 16px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        #result-panel .inputs label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        #result-panel .inputs label[hidden] {
+            display: none;
+        }
+        #result-panel .inputs input,
+        #result-panel .inputs select {
+            padding: 4px 6px;
+            font-size: 13px;
+        }
+        #result-panel .inputs input {
+            width: 100px;
+        }
+        .step {
+            margin: 6px 0;
+            padding: 8px 10px;
+            border-left: 4px solid #ccc;
+            background: #fafafa;
+        }
+        .step.required { border-left-color: #e63946; }
+        .step.check { border-left-color: #e9a400; }
+        .step.info { border-left-color: #2a9d8f; }
+        .step.yes { border-left-color: #2a9d8f; }
+        .step.no { border-left-color: #999; }
+        .step.ask { border-left-color: #1d72b8; }
+        .step-title {
+            font-weight: bold;
+        }
+        .law {
+            margin-top: 4px;
+            font-size: 12px;
+            color: #666;
+        }
+        .law summary {
+            cursor: pointer;
+        }
+        #result-panel ul.notes {
+            margin: 0;
+            padding-left: 18px;
+        }
+        #result-panel .disclaimer {
+            margin: 14px 0 0 0;
+            font-size: 12px;
+            color: #666;
+        }
     </style>
 </head>
 <body>    
@@ -71,6 +150,9 @@
         </button>
     </div>
 
+    <!-- 진단 결과 패널: 필지를 누르면 해야 할 일과 비용 안내 표시 -->
+    <section id="result-panel" hidden></section>
+
     <!-- 데이터 출처 표시 -->
     <p id="data-source" style="margin: 0 0 10px 0; font-size: 12px; color: #666;">
         출처: 국가유산청 국가유산 공간정보서비스(문화유적분포지도), 국토교통부 브이월드(국가유산 지정/보호구역, 지적도), OpenStreetMap
@@ -78,6 +160,9 @@
 
     <!-- 3. Leaflet 자바스크립트 불러오기 -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- 다음 단계 안내 규칙 -->
+    <script src="guidance.js"></script>
 
     <script>
         // 지도 초기화 (서울 시청 위경도 좌표 [37.5665, 126.9780], 줌 레벨 13)
@@ -384,8 +469,10 @@
                     if (data.parcel) {
                         highlightParcel(data.parcel.geometry);
                         showParcelResult(clickMarker, data);
+                        showGuidancePanel(data);
                         return;
                     }
+                    resultPanel.hidden = true;
                     return fetch(`/api/heritage?${query}`)
                         .then(response => {
                             if (!response.ok) throw new Error('국가유산 구역 조회 실패');
@@ -416,7 +503,7 @@
         function showParcelResult(marker, data) {
             const parcel = data.parcel;
             const items = [
-                ...(data.zones || []).map(zone => ({ name: zone.name || '이름 없음', type: zone.type, overlapArea: zone.overlapArea, overlapRatio: zone.overlapRatio, edgeOnly: zone.edgeOnly })),
+                ...(data.zones || []).map(zone => ({ name: zone.name, type: zone.type, overlapArea: zone.overlapArea, overlapRatio: zone.overlapRatio, edgeOnly: zone.edgeOnly })),
                 ...dedupeSites(data.sites || []).map(site => ({ name: site.name || '이름 없음', type: '문화유적 분포 범위', overlapArea: site.overlapArea, overlapRatio: site.overlapRatio, edgeOnly: site.edgeOnly }))
             ].sort((a, b) => b.overlapArea - a.overlapArea);
 
@@ -430,12 +517,16 @@
                     <span style="color: #666;">지목·지번 ${escapeHtml(parcel.jibun)} · 필지 면적 ${formatArea(parcel.area)}</span>
                 </p>`;
 
-            const listItem = item => `<li>${escapeHtml(item.name)} <span style="color: #666;">(${escapeHtml(item.type)})</span> · ${formatArea(item.overlapArea)} (${item.overlapRatio}%)</li>`;
+            // 이름이 없는 구역(역사문화환경 보존지역 등)은 종류만 표시
+            const itemLabel = item => item.name
+                ? `${escapeHtml(item.name)} <span style="color: #666;">(${escapeHtml(item.type)})</span>`
+                : escapeHtml(item.type);
+            const listItem = item => `<li>${itemLabel(item)} · ${formatArea(item.overlapArea)} (${item.overlapRatio}%)</li>`;
             const realList = realItems.length > 0
                 ? `<ul style="margin: 5px 0 0 0; padding-left: 18px; font-size: 13px;">${realItems.map(listItem).join('')}</ul>`
                 : '';
             const edgeList = edgeItems.length > 0
-                ? `<p style="margin: 6px 0 0 0; font-size: 12px; color: #666;">경계에만 걸침 (도면 오차일 수 있음): ${edgeItems.map(item => escapeHtml(item.name)).join(', ')}</p>`
+                ? `<p style="margin: 6px 0 0 0; font-size: 12px; color: #666;">경계에만 걸침 (도면 오차일 수 있음): ${edgeItems.map(item => escapeHtml(item.name || item.type)).join(', ')}</p>`
                 : '';
             const failNote = failed
                 ? '<p style="margin: 5px 0 0 0; font-size: 12px; color: #666;">※ 일부 데이터를 불러오지 못해 결과가 불완전할 수 있습니다.</p>'
@@ -465,8 +556,107 @@
                     ${realList}
                     ${edgeList}
                     ${failNote}
+                    <p style="margin: 6px 0 0 0; font-size: 12px; color: #1d72b8;">▼ 지도 아래에서 해야 할 일을 확인하세요.</p>
                 </div>
             `);
+        }
+
+        // 진단 결과 패널 (guidance.js의 규칙으로 해야 할 일과 비용 안내 생성)
+        const resultPanel = document.getElementById('result-panel');
+        let lastParcelResult = null;
+
+        const WORK_TYPES = [
+            ['', '선택 안 함'],
+            ['house', '단독주택'],
+            ['farm', '농업인·어업인 시설물'],
+            ['business', '개인사업자 시설물'],
+            ['factory', '공장'],
+            ['other', '그 밖의 공사']
+        ];
+
+        function readNumber(id) {
+            const input = document.getElementById(id);
+            if (!input || input.value.trim() === '') return null;
+            const value = Number(input.value);
+            return Number.isFinite(value) && value >= 0 ? value : null;
+        }
+
+        function showGuidancePanel(data) {
+            lastParcelResult = data;
+            const workOptions = WORK_TYPES
+                .map(([value, label]) => `<option value="${value}">${label}</option>`)
+                .join('');
+
+            resultPanel.innerHTML = `
+                <h3>진단 결과 · 해야 할 일</h3>
+                <p class="panel-sub">${escapeHtml(data.parcel.address)} · 필지 면적 ${formatArea(data.parcel.area)}</p>
+                <div class="inputs">
+                    <label>공사 종류 <select id="work-type">${workOptions}</select></label>
+                    <label>사업(대지) 면적 <input id="land-area" type="number" min="0" step="1" value="${Math.round(data.parcel.area)}"> ㎡</label>
+                    <label id="floor-area-field" hidden>건축물 연면적 <input id="floor-area" type="number" min="0" step="1"> ㎡</label>
+                </div>
+                <div id="guidance-body"></div>
+            `;
+            resultPanel.hidden = false;
+
+            resultPanel.querySelectorAll('select, input').forEach(element => {
+                element.addEventListener('input', renderGuidance);
+            });
+            renderGuidance();
+        }
+
+        function lawDetails(law) {
+            return law
+                ? `<details class="law"><summary>법령 근거</summary>${escapeHtml(law)}</details>`
+                : '';
+        }
+
+        function renderGuidance() {
+            if (!lastParcelResult) return;
+
+            const workType = document.getElementById('work-type').value;
+            document.getElementById('floor-area-field').hidden = workType !== 'business';
+
+            const guidance = window.buildGuidance(lastParcelResult, {
+                workType,
+                landArea: readNumber('land-area'),
+                floorArea: workType === 'business' ? readNumber('floor-area') : null
+            });
+
+            const steps = guidance.steps.map(step => `
+                <div class="step ${step.level}">
+                    <div class="step-title">${escapeHtml(step.title)}</div>
+                    <div>${escapeHtml(step.body)}</div>
+                    ${lawDetails(step.law)}
+                </div>`).join('');
+
+            const cost = guidance.cost ? `
+                <h4>비용</h4>
+                <div class="step info">
+                    <div>${escapeHtml(guidance.cost.summary)}</div>
+                    ${lawDetails(guidance.cost.law)}
+                </div>
+                <div class="step ${guidance.cost.support.level}">
+                    <div>${escapeHtml(guidance.cost.support.text)}</div>
+                    ${lawDetails(guidance.cost.support.law)}
+                </div>` : '';
+
+            const notes = guidance.notes.map(note => `
+                <li>${escapeHtml(note.text)} ${lawDetails(note.law)}</li>`).join('');
+
+            const incomplete = guidance.incomplete
+                ? '<p class="disclaimer">※ 일부 데이터를 불러오지 못해 안내가 불완전할 수 있어요.</p>'
+                : '';
+
+            document.getElementById('guidance-body').innerHTML = `
+                <h4>해야 할 일</h4>
+                ${steps}
+                ${cost}
+                <h4>알아두세요</h4>
+                <ul class="notes">${notes}</ul>
+                ${incomplete}
+                <p class="disclaimer">이 안내는 공공데이터와 법령을 바탕으로 한 <b>참고용 정보</b>이며 법적 판단을 대신하지 않아요. 정확한 내용은 관할 시·군·구 문화유산 담당 부서나 국가유산청에 문의하세요.</p>
+            `;
         }
 
         function showResult(marker, data) {
