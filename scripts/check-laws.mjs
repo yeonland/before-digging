@@ -7,6 +7,9 @@ import { readFile, writeFile } from 'node:fs/promises';
 const STATE_FILE = new URL('../data/law-versions.json', import.meta.url);
 const CHANGES_FILE = new URL('../law-changes.md', import.meta.url);
 
+// 오픈API 신청 때 등록한 도메인. API가 요청의 Referer로 사용자를 검증하므로 함께 보내야 함
+const REGISTERED_DOMAIN = 'https://before-digging.vercel.app/';
+
 // 지켜볼 법령 (검색어 → 정확히 일치하는 법령명만 사용)
 const WATCHED = [
     { query: '국가유산영향진단법', names: ['국가유산영향진단법', '국가유산영향진단법 시행령', '국가유산영향진단법 시행규칙'] },
@@ -29,7 +32,9 @@ function formatDate(yyyymmdd) {
 
 async function searchLaws(query) {
     const params = new URLSearchParams({ OC: oc, target: 'law', type: 'JSON', query, display: '100' });
-    const response = await fetch(`https://www.law.go.kr/DRF/lawSearch.do?${params}`);
+    const response = await fetch(`https://www.law.go.kr/DRF/lawSearch.do?${params}`, {
+        headers: { Referer: REGISTERED_DOMAIN }
+    });
     const text = await response.text();
 
     let body;
