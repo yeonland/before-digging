@@ -11,6 +11,8 @@ on:
     branches: [main]
     paths:
       - 'scripts/check-laws.mjs'
+      - 'api/law-versions.js'
+      - 'data/watched-laws.json'
       - '.github/workflows/law-watch.yml'
 
 permissions:
@@ -27,9 +29,8 @@ jobs:
         with:
           node-version: '22'
 
+      # 법령 API는 해외 접속을 막아서, 서울 리전 Vercel 함수(/api/law-versions)를 거쳐 조회
       - name: 법령 개정 확인
-        env:
-          LAW_API_OC: ${{ secrets.LAW_API_OC }}
         run: node scripts/check-laws.mjs
 
       - name: 개정 내용으로 이슈 만들기

@@ -1,28 +1,24 @@
-// 서비스 안내(guidance.js)에 쓰는 법령이 개정됐는지 국가법령정보 공동활용 오픈API로 확인
+// 서비스 안내(guidance.js)에 쓰는 법령이 개정됐는지 확인
+// - 법령 정보는 서울 리전의 /api/law-versions에서 받음 (법령 API가 해외 접속을 막아 GitHub에서 직접 못 부름)
 // - 법령일련번호(MST)가 바뀌면 개정된 것으로 보고 data/law-versions.json을 갱신
 // - 바뀐 내용은 GitHub 이슈 본문으로 쓸 수 있게 law-changes.md에 저장 (워크플로가 이슈 생성)
-// 사용: LAW_API_OC=<인증값> node scripts/check-laws.mjs
+// 사용: node scripts/check-laws.mjs
 import { readFile, writeFile } from 'node:fs/promises';
 
 const STATE_FILE = new URL('../data/law-versions.json', import.meta.url);
 const CHANGES_FILE = new URL('../law-changes.md', import.meta.url);
+const VERSIONS_URL = process.env.LAW_VERSIONS_URL || 'https://before-digging.vercel.app/api/law-versions';
 
-// 오픈API 신청 때 등록한 도메인. API가 요청의 Referer로 사용자를 검증하므로 함께 보내야 함
-const REGISTERED_DOMAIN = 'https://before-digging.vercel.app/';
+// 배포 직후에는 새 함수가 아직 없을 수 있어 몇 번 다시 시도
+const RETRIES = 5;
+const RETRY_DELAY_MS = 30000;
 
-// 지켜볼 법령 (검색어 → 정확히 일치하는 법령명만 사용)
-const WATCHED = [
-    { query: '국가유산영향진단법', names: ['국가유산영향진단법', '국가유산영향진단법 시행령', '국가유산영향진단법 시행규칙'] },
-    { query: '매장유산 보호 및 조사에 관한 법률', names: ['매장유산 보호 및 조사에 관한 법률', '매장유산 보호 및 조사에 관한 법률 시행령', '매장유산 보호 및 조사에 관한 법률 시행규칙'] },
-    { query: '문화유산의 보존 및 활용에 관한 법률', names: ['문화유산의 보존 및 활용에 관한 법률', '문화유산의 보존 및 활용에 관한 법률 시행령', '문화유산의 보존 및 활용에 관한 법률 시행규칙'] }
-];
-
-const oc = process.env.LAW_API_OC;
-
-if (!oc) {
-    console.log('LAW_API_OC가 설정되지 않아 법령 확인을 건너뜁니다.');
-    process.exit(0);
-}
+// 실패 이유가 GitHub 실행 요약에 보이도록 오류 주석으로 남기고 종료
+process.on('uncaughtException', (error) => {
+    const message = String((error && error.message) || error).replace(/\s+/g, ' ');
+    console.log(`::error title=법령 확인 실패::${message}`);
+    process.exit(1);
+});
 
 function formatDate(yyyymmdd) {
     return /^\d{8}$/.test(yyyymmdd || '')
@@ -30,64 +26,31 @@ function formatDate(yyyymmdd) {
         : yyyymmdd || '-';
 }
 
-// 실패 이유가 GitHub 실행 요약에 보이도록 오류 주석으로 남기고 종료 (인증값은 가림)
-process.on('uncaughtException', (error) => {
-    const message = String((error && error.message) || error).replaceAll(oc, '***').replace(/\s+/g, ' ');
-    console.log(`::error title=법령 확인 실패::${message}`);
-    process.exit(1);
-});
-
-async function searchLaws(query) {
-    const params = new URLSearchParams({ OC: oc, target: 'law', type: 'JSON', query, display: '100' });
-    let response;
-    try {
-        response = await fetch(`https://www.law.go.kr/DRF/lawSearch.do?${params}`, {
-            headers: { Referer: REGISTERED_DOMAIN }
-        });
-    } catch (error) {
-        const reason = error.cause ? error.cause.code || error.cause.message : error.message;
-        throw new Error(`법령 API에 연결하지 못했습니다: ${reason}`);
-    }
-    const text = await response.text();
-
-    let body;
-    try {
-        body = JSON.parse(text);
-    } catch {
-        throw new Error(`법령 API 응답을 읽을 수 없습니다 (${response.status}): ${text.slice(0, 200)}`);
-    }
-
-    if (!body.LawSearch) {
-        throw new Error(`법령 API 오류: ${text.slice(0, 200)}`);
-    }
-
-    return [].concat(body.LawSearch.law || []);
-}
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function fetchCurrentVersions() {
-    const versions = {};
+    let lastError;
 
-    for (const { query, names } of WATCHED) {
-        const laws = await searchLaws(query);
+    for (let attempt = 1; attempt <= RETRIES; attempt++) {
+        try {
+            const response = await fetch(VERSIONS_URL);
+            const body = await response.json().catch(() => ({}));
 
-        for (const name of names) {
-            const law = laws.find((item) => item['법령명한글'] === name);
-            if (!law) {
-                throw new Error(`"${name}"을(를) 찾지 못했습니다. 법령명이 바뀌었을 수 있습니다.`);
+            if (response.ok && body.versions) {
+                return body.versions;
             }
-            versions[name] = {
-                mst: law['법령일련번호'],
-                lawId: law['법령ID'],
-                kind: law['법령구분명'],
-                effectiveDate: law['시행일자'],
-                promulgationDate: law['공포일자'],
-                promulgationNo: law['공포번호'],
-                revisionType: law['제개정구분명']
-            };
+            lastError = new Error(`법령 정보 조회 실패 (${response.status}): ${body.message || '응답 형식 오류'}`);
+        } catch (error) {
+            lastError = new Error(`법령 정보 서버에 연결하지 못했습니다: ${error.cause ? error.cause.code || error.cause.message : error.message}`);
+        }
+
+        if (attempt < RETRIES) {
+            console.log(`${lastError.message} → ${RETRY_DELAY_MS / 1000}초 뒤 다시 시도 (${attempt}/${RETRIES})`);
+            await sleep(RETRY_DELAY_MS);
         }
     }
 
-    return versions;
+    throw lastError;
 }
 
 async function readState() {
