@@ -1,0 +1,83 @@
+{
+  "국가유산영향진단법": {
+    "mst": "260463",
+    "lawId": "014620",
+    "kind": "법률",
+    "effectiveDate": "20250214",
+    "promulgationDate": "20240213",
+    "promulgationNo": "20309",
+    "revisionType": "타법개정"
+  },
+  "국가유산영향진단법 시행령": {
+    "mst": "278097",
+    "lawId": "014842",
+    "kind": "대통령령",
+    "effectiveDate": "20251001",
+    "promulgationDate": "20251001",
+    "promulgationNo": "35811",
+    "revisionType": "타법개정"
+  },
+  "국가유산영향진단법 시행규칙": {
+    "mst": "279513",
+    "lawId": "014850",
+    "kind": "문화체육관광부령",
+    "effectiveDate": "20251031",
+    "promulgationDate": "20251031",
+    "promulgationNo": "00617",
+    "revisionType": "타법개정"
+  },
+  "매장유산 보호 및 조사에 관한 법률": {
+    "mst": "285661",
+    "lawId": "011152",
+    "kind": "법률",
+    "effectiveDate": "20260517",
+    "promulgationDate": "20260428",
+    "promulgationNo": "21585",
+    "revisionType": "타법개정"
+  },
+  "매장유산 보호 및 조사에 관한 법률 시행령": {
+    "mst": "285999",
+    "lawId": "011339",
+    "kind": "대통령령",
+    "effectiveDate": "20260517",
+    "promulgationDate": "20260512",
+    "promulgationNo": "36324",
+    "revisionType": "타법개정"
+  },
+  "매장유산 보호 및 조사에 관한 법률 시행규칙": {
+    "mst": "288507",
+    "lawId": "011346",
+    "kind": "문화체육관광부령",
+    "effectiveDate": "20260730",
+    "promulgationDate": "20260730",
+    "promulgationNo": "00646",
+    "revisionType": "일부개정"
+  },
+  "문화유산의 보존 및 활용에 관한 법률": {
+    "mst": "283305",
+    "lawId": "001607",
+    "kind": "법률",
+    "effectiveDate": "20260624",
+    "promulgationDate": "20260210",
+    "promulgationNo": "21335",
+    "revisionType": "일부개정"
+  },
+  "문화유산의 보존 및 활용에 관한 법률 시행령": {
+    "mst": "290395",
+    "lawId": "003506",
+    "kind": "대통령령",
+    "effectiveDate": "20261002",
+    "promulgationDate": "20260929",
+    "promulgationNo": "36728",
+    "revisionType": "타법개정"
+  },
+  "문화유산의 보존 및 활용에 관한 법률 시행규칙": {
+    "mst": "271617",
+    "lawId": "007165",
+    "kind": "문화체육관광부령",
+    "effectiveDate": "20250605",
+    "promulgationDate": "20250605",
+    "promulgationNo": "00604",
+    "revisionType": "일부개정"
+  }
+}
