@@ -11,7 +11,29 @@
         /* 지도를 담을 div는 반드시 높이(height)가 있어야 함! */
         #map { 
             width: 100%; 
-            height: 480px; 
+            height: 480px;
+        }
+
+        /* 지도 범례 */
+        .map-legend {
+            background: white;
+            padding: 6px 10px;
+            font-size: 12px;
+            line-height: 20px;
+            border-radius: 4px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+        .map-legend .legend-title {
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+        .map-legend .swatch {
+            display: inline-block;
+            width: 14px;
+            height: 12px;
+            margin-right: 6px;
+            vertical-align: middle;
+            box-sizing: border-box;
         }
     </style>
 </head>
@@ -100,10 +122,11 @@
         const sitesLayer = L.geoJSON(null, {
             interactive: false,
             style: {
-                color: '#1d72b8',
+                // VWorld 보호구역(파란 빗금)과 구분되도록 보라색 사용
+                color: '#7b2cbf',
                 weight: 1.5,
-                fillColor: '#4ea8de',
-                fillOpacity: 0.3
+                fillColor: '#9d4edd',
+                fillOpacity: 0.25
             }
         }).addTo(map);
         const loadedSiteTiles = new Set();
@@ -151,6 +174,22 @@
             "문화유적 분포 범위 표시": sitesLayer
         };
         L.control.layers(null, overlayMaps).addTo(map);
+
+        // 범례: 지도 색깔이 무엇을 뜻하는지 표시 (VWorld 색은 GetLegendGraphic 기준)
+        const legend = L.control({ position: 'bottomright' });
+        legend.onAdd = function() {
+            const div = L.DomUtil.create('div', 'map-legend');
+            div.innerHTML = `
+                <div class="legend-title">범례</div>
+                <div><span class="swatch" style="background: #ffff4d; border: 1px solid #c9c900;"></span>국가·시도 지정유산 구역</div>
+                <div><span class="swatch" style="background: repeating-linear-gradient(135deg, #4bb3e8 0 2px, #fff 2px 4px);"></span>보호구역</div>
+                <div><span class="swatch" style="border: 2px solid #4caf50;"></span>역사문화환경 보존지역</div>
+                <div><span class="swatch" style="background: rgba(157, 78, 221, 0.25); border: 1.5px solid #7b2cbf;"></span>문화유적 분포 범위</div>
+                <div><span class="swatch" style="border: 1.5px solid #e8a33d;"></span>지적도(필지 경계)</div>
+            `;
+            return div;
+        };
+        legend.addTo(map);
 
         // 켜져 있는 레이어가 현재 줌에서 안 보이면 안내 문구 표시
         const CADASTRAL_MIN_ZOOM = 17;
