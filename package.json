@@ -1,0 +1,11 @@
+{
+  "name": "before-digging",
+  "private": true,
+  "description": "땅파기전 - 문화유산 사전 확인 지도 서비스",
+  "dependencies": {
+    "@turf/area": "7.4.0",
+    "@turf/helpers": "7.4.0",
+    "@turf/intersect": "7.4.0",
+    "@turf/union": "7.4.0"
+  }
+}

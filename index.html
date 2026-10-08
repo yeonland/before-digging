@@ -218,11 +218,28 @@
 
         // 지도 위 핀은 하나만 유지 (내 위치, 검색, 클릭 중 마지막 것만 표시)
         let activeMarker = null;
+        let parcelHighlight = null;
 
         function placeMarker(latlng) {
             if (activeMarker) map.removeLayer(activeMarker);
+            if (parcelHighlight) map.removeLayer(parcelHighlight);
+            parcelHighlight = null;
             activeMarker = L.marker(latlng).addTo(map);
             return activeMarker;
+        }
+
+        // 진단한 필지를 지도에 강조 표시
+        function highlightParcel(geometry) {
+            if (parcelHighlight) map.removeLayer(parcelHighlight);
+            parcelHighlight = L.geoJSON(geometry, {
+                interactive: false,
+                style: {
+                    color: '#d62828',
+                    weight: 3,
+                    fillColor: '#d62828',
+                    fillOpacity: 0.08
+                }
+            }).addTo(map);
         }
 
         // 브라우저의 Geolocation 기능 지원 확인
@@ -308,23 +325,105 @@
             const clickedLatlng = e.latlng;
             // 응답이 늦게 와도 이 클릭의 핀에만 결과를 넣도록 지역 변수로 보관
             const clickMarker = placeMarker(clickedLatlng);
-            clickMarker.bindPopup('국가유산 데이터 확인 중...').openPopup();
+            clickMarker.bindPopup('필지와 국가유산 데이터 확인 중...', { maxWidth: 320 }).openPopup();
 
-            const url = `/api/heritage?lat=${clickedLatlng.lat}&lng=${clickedLatlng.lng}`;
+            const query = `lat=${clickedLatlng.lat}&lng=${clickedLatlng.lng}`;
 
-            fetch(url)
+            // 필지 단위로 진단하고, 지적도에 없는 곳이면 클릭 지점만 진단
+            fetch(`/api/parcel?${query}`)
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error('국가유산 구역 조회 실패');
-                    }
+                    if (!response.ok) throw new Error('필지 진단 실패');
                     return response.json();
                 })
-                .then(data => showResult(clickMarker, data))
+                .then(data => {
+                    if (clickMarker !== activeMarker) return; // 그사이 다른 곳을 눌렀으면 무시
+                    if (data.parcel) {
+                        highlightParcel(data.parcel.geometry);
+                        showParcelResult(clickMarker, data);
+                        return;
+                    }
+                    return fetch(`/api/heritage?${query}`)
+                        .then(response => {
+                            if (!response.ok) throw new Error('국가유산 구역 조회 실패');
+                            return response.json();
+                        })
+                        .then(pointData => showResult(clickMarker, pointData));
+                })
                 .catch(error => {
-                    console.error('국가유산 구역 조회 오류:', error);
-                    clickMarker.setPopupContent('국가유산 구역을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+                    console.error('진단 오류:', error);
+                    clickMarker.setPopupContent('국가유산 데이터를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
                 });
         });
+
+        function formatArea(value) {
+            return `${value.toLocaleString('ko-KR')}㎡`;
+        }
+
+        // 같은 이름이 여러 번 등록된 유적은 가장 많이 겹친 것 하나만 표시
+        function dedupeSites(sites) {
+            const byName = new Map();
+            sites.forEach(site => {
+                const prev = byName.get(site.name);
+                if (!prev || site.overlapArea > prev.overlapArea) byName.set(site.name, site);
+            });
+            return [...byName.values()];
+        }
+
+        function showParcelResult(marker, data) {
+            const parcel = data.parcel;
+            const items = [
+                ...(data.zones || []).map(zone => ({ name: zone.name || '이름 없음', type: zone.type, overlapArea: zone.overlapArea, overlapRatio: zone.overlapRatio, edgeOnly: zone.edgeOnly })),
+                ...dedupeSites(data.sites || []).map(site => ({ name: site.name || '이름 없음', type: '문화유적 분포 범위', overlapArea: site.overlapArea, overlapRatio: site.overlapRatio, edgeOnly: site.edgeOnly }))
+            ].sort((a, b) => b.overlapArea - a.overlapArea);
+
+            const realItems = items.filter(item => !item.edgeOnly);
+            const edgeItems = items.filter(item => item.edgeOnly);
+            const failed = data.zones === null || data.sites === null;
+
+            const parcelInfo = `
+                <p style="margin: 0 0 6px 0; font-size: 13px;">
+                    <b>${escapeHtml(parcel.address)}</b><br>
+                    <span style="color: #666;">지목·지번 ${escapeHtml(parcel.jibun)} · 필지 면적 ${formatArea(parcel.area)}</span>
+                </p>`;
+
+            const listItem = item => `<li>${escapeHtml(item.name)} <span style="color: #666;">(${escapeHtml(item.type)})</span> · ${formatArea(item.overlapArea)} (${item.overlapRatio}%)</li>`;
+            const realList = realItems.length > 0
+                ? `<ul style="margin: 5px 0 0 0; padding-left: 18px; font-size: 13px;">${realItems.map(listItem).join('')}</ul>`
+                : '';
+            const edgeList = edgeItems.length > 0
+                ? `<p style="margin: 6px 0 0 0; font-size: 12px; color: #666;">경계에만 걸침 (도면 오차일 수 있음): ${edgeItems.map(item => escapeHtml(item.name)).join(', ')}</p>`
+                : '';
+            const failNote = failed
+                ? '<p style="margin: 5px 0 0 0; font-size: 12px; color: #666;">※ 일부 데이터를 불러오지 못해 결과가 불완전할 수 있습니다.</p>'
+                : '';
+
+            let title;
+            let summary;
+            if (realItems.length > 0) {
+                title = '<h4 style="margin: 0 0 5px 0; color: #e63946;">국가유산 관련 영역 해당</h4>';
+                summary = `<p style="margin: 0; font-size: 13px;"><b>확인 결과:</b> 🔴 필지의 <b>${data.overlap.ratio}% (${formatArea(data.overlap.area)})</b>가 관련 영역에 걸칩니다.</p>`;
+            } else if (edgeItems.length > 0) {
+                title = '<h4 style="margin: 0 0 5px 0; color: #e9a400;">경계 확인 필요</h4>';
+                summary = '<p style="margin: 0; font-size: 13px;"><b>확인 결과:</b> 🟡 관련 영역이 필지 경계에만 살짝 걸칩니다.</p>';
+            } else if (failed) {
+                title = '<h4 style="margin: 0 0 5px 0; color: #666;">확인된 영역 없음</h4>';
+                summary = '<p style="margin: 0; font-size: 13px;">관련 영역이 없지만, 일부 데이터를 불러오지 못했습니다. 잠시 후 다시 확인해 주세요.</p>';
+            } else {
+                title = '<h4 style="margin: 0 0 5px 0; color: #2a9d8f;">국가유산 관련 영역 외 지역</h4>';
+                summary = '<p style="margin: 0; font-size: 13px;"><b>확인 결과:</b> 🟢 필지가 관련 영역에 포함되지 않습니다.</p>';
+            }
+
+            marker.setPopupContent(`
+                <div style="padding: 5px;">
+                    ${title}
+                    ${parcelInfo}
+                    ${summary}
+                    ${realList}
+                    ${edgeList}
+                    ${failNote}
+                </div>
+            `);
+        }
 
         function showResult(marker, data) {
             const zones = data.zones || [];
