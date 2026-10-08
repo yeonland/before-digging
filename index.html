@@ -531,6 +531,10 @@
             const failNote = failed
                 ? '<p style="margin: 5px 0 0 0; font-size: 12px; color: #666;">※ 일부 데이터를 불러오지 못해 결과가 불완전할 수 있습니다.</p>'
                 : '';
+            const nearest = (data.nearbySites || [])[0];
+            const nearestLine = nearest
+                ? `<p style="margin: 6px 0 0 0; font-size: 12px; color: #666;">가장 가까운 문화유적: ${escapeHtml(nearest.name)} · 약 ${nearest.distance}m</p>`
+                : '';
 
             let title;
             let summary;
@@ -555,6 +559,7 @@
                     ${summary}
                     ${realList}
                     ${edgeList}
+                    ${nearestLine}
                     ${failNote}
                     <p style="margin: 6px 0 0 0; font-size: 12px; color: #1d72b8;">▼ 지도 아래에서 해야 할 일을 확인하세요.</p>
                 </div>
@@ -641,6 +646,16 @@
                     ${lawDetails(guidance.cost.support.law)}
                 </div>` : '';
 
+            const nearbySites = lastParcelResult.nearbySites;
+            const nearby = nearbySites === null || nearbySites === undefined
+                ? ''
+                : `
+                <h4>주변 문화유적 (500m 이내)</h4>
+                ${nearbySites.length > 0
+                    ? `<ul class="notes">${nearbySites.map(site => `<li>${escapeHtml(site.name)} · 약 ${site.distance}m${site.mapNo ? ` <span style="color: #666; font-size: 12px;">(분포지도 ${escapeHtml(site.mapNo)})</span>` : ''}</li>`).join('')}</ul>`
+                    : '<p class="panel-sub">500m 안에 문화유적 분포 범위가 없어요.</p>'}
+                <p class="disclaimer" style="margin-top: 4px;">필지 경계에서 각 유적 분포 범위 경계까지의 가장 짧은 거리예요. 이미 필지와 겹치는 유적은 빼고 가까운 5곳만 보여줘요.</p>`;
+
             const notes = guidance.notes.map(note => `
                 <li>${escapeHtml(note.text)} ${lawDetails(note.law)}</li>`).join('');
 
@@ -652,6 +667,7 @@
                 <h4>해야 할 일</h4>
                 ${steps}
                 ${cost}
+                ${nearby}
                 <h4>알아두세요</h4>
                 <ul class="notes">${notes}</ul>
                 ${incomplete}

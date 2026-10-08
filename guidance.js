@@ -4,6 +4,9 @@
     // 국가유산영향진단법 시행령 제5조제1항: 사업 면적 3만㎡ 이상
     const DIAGNOSIS_AREA = 30000;
 
+    // 이 거리 안에 문화유적이 있으면 주의 안내 (법적 기준이 아닌 서비스 참고 기준, m)
+    const NEARBY_CAUTION_DISTANCE = 100;
+
     // 매장유산법 시행령 제10조: 발굴경비 지원 대상 건설공사
     // rule: "~이면 지원 대상"에 들어갈 기준 문장, extra: 덧붙일 예외
     const SUPPORT_RULES = {
@@ -128,10 +131,21 @@
             });
         }
 
-        // 5. 비용
+        // 5. 가까운 문화유적 (필지가 유적 범위 밖일 때만)
+        const nearest = (result.nearbySites || [])[0];
+        if (!area.inSites && nearest && nearest.distance <= NEARBY_CAUTION_DISTANCE) {
+            steps.push({
+                level: 'check',
+                title: '가까이에 문화유적이 있어요',
+                body: `필지에서 약 ${nearest.distance}m 떨어진 곳에 '${nearest.name}' 분포 범위가 있어요. 유적 범위 밖이라 법적 절차 대상은 아니지만, 유적이 주변까지 이어져 있을 수 있으니 공사 전에 관할 시·군·구에 문의해 두면 좋아요.`,
+                law: '법적 기준이 아닌 참고 안내예요. (서비스 기준: 100m 이내)'
+            });
+        }
+
+        // 6. 비용
         const cost = needsDiagnosis || area.inHistoricEnv ? buildCost(input) : null;
 
-        // 6. 공통 주의사항
+        // 7. 공통 주의사항
         const notes = [];
         if (needsDiagnosis) {
             notes.push({

@@ -6,12 +6,69 @@ const { area } = require('@turf/area');
 const { feature, featureCollection } = require('@turf/helpers');
 const { intersect } = require('@turf/intersect');
 const { union } = require('@turf/union');
-const { fetchSites } = require('./_heritage-gis');
+const { fetchSites, isPointInGeometry } = require('./_heritage-gis');
 
 // 이보다 작은 겹침은 무시 (㎡)
 const MIN_OVERLAP_AREA = 1;
 // 이보다 작은 겹침은 경계에만 걸친 것으로 표시하고 전체 면적에서 뺌 (지적도와 구역도의 도면 오차 고려, ㎡)
 const EDGE_OVERLAP_AREA = 10;
+// 주변 문화유적을 찾는 반경과 최대 표시 개수 (법적 기준이 아닌 참고용)
+const NEARBY_RADIUS = 500;
+const NEARBY_LIMIT = 5;
+
+// 필지 주변 좁은 범위라 평면으로 근사해 미터 단위 좌표로 바꿈
+function toMeters([lng, lat], origin) {
+    return [
+        (lng - origin[0]) * 111320 * Math.cos((origin[1] * Math.PI) / 180),
+        (lat - origin[1]) * 110540
+    ];
+}
+
+function pointToSegmentDistance(p, a, b) {
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const lengthSquared = dx * dx + dy * dy;
+    const t = lengthSquared === 0
+        ? 0
+        : Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / lengthSquared));
+    return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy));
+}
+
+function getRings(geometry) {
+    const polygons =
+        geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates;
+    return polygons.flat(1);
+}
+
+// outer 안에 inner의 꼭짓점이 하나라도 있으면 true (한쪽이 다른 쪽을 품는 경우 감지)
+function containsAnyVertex(outer, inner) {
+    return getRings(inner).some((ring) =>
+        ring.some(([lng, lat]) => isPointInGeometry(lng, lat, outer))
+    );
+}
+
+// 두 다각형 경계 사이의 가장 짧은 거리(m). 겹치는 경우는 겹침 계산에서 따로 처리
+function getDistance(geometryA, geometryB, origin) {
+    const ringsA = getRings(geometryA).map((ring) => ring.map((point) => toMeters(point, origin)));
+    const ringsB = getRings(geometryB).map((ring) => ring.map((point) => toMeters(point, origin)));
+    let min = Infinity;
+
+    const measure = (fromRings, toRings) => {
+        for (const fromRing of fromRings) {
+            for (const point of fromRing) {
+                for (const ring of toRings) {
+                    for (let i = 1; i < ring.length; i++) {
+                        min = Math.min(min, pointToSegmentDistance(point, ring[i - 1], ring[i]));
+                    }
+                }
+            }
+        }
+    };
+
+    measure(ringsA, ringsB);
+    measure(ringsB, ringsA);
+    return min;
+}
 
 async function fetchVworldFeatures(data, geomFilter, apiKey, registeredDomain) {
     const params = new URLSearchParams({
@@ -142,6 +199,10 @@ module.exports = async function handler(req, res) {
     const parcelArea = area(parcelFeature);
     const [minLng, minLat, maxLng, maxLat] = getBbox(parcelFeature.geometry);
 
+    // 문화유적은 주변 거리 안내를 위해 필지에서 반경만큼 넓힌 범위로 조회
+    const latPad = NEARBY_RADIUS / 110540;
+    const lngPad = NEARBY_RADIUS / (111320 * Math.cos((minLat * Math.PI) / 180));
+
     const [zonesResult, sitesResult] = await Promise.allSettled([
         fetchVworldFeatures(
             'LT_C_UO301',
@@ -149,7 +210,7 @@ module.exports = async function handler(req, res) {
             apiKey,
             registeredDomain
         ),
-        fetchSites([minLng, minLat, maxLng, maxLat], 200)
+        fetchSites([minLng - lngPad, minLat - latPad, maxLng + lngPad, maxLat + latPad], 1000)
     ]);
 
     if (zonesResult.status === 'rejected') {
@@ -170,15 +231,38 @@ module.exports = async function handler(req, res) {
         )
         : null;
 
-    const sites = sitesResult.status === 'fulfilled'
-        ? measureOverlaps(
-            parcelFeature,
-            sitesResult.value.map((site) => ({
-                name: site.properties.name,
-                mapNo: site.properties.mapNo,
-                geometry: site.geometry
-            }))
-        )
+    // 문화유적마다 필지까지 거리를 재서, 닿는 것(0m)은 겹침 계산으로, 나머지는 주변 유적으로 나눔
+    const origin = [minLng, minLat];
+    const measuredSites = sitesResult.status === 'fulfilled'
+        ? sitesResult.value.map((site) => ({
+            name: site.properties.name,
+            mapNo: site.properties.mapNo,
+            geometry: site.geometry,
+            distance: containsAnyVertex(parcelFeature.geometry, site.geometry) ||
+                containsAnyVertex(site.geometry, parcelFeature.geometry)
+                ? 0
+                : getDistance(parcelFeature.geometry, site.geometry, origin)
+        }))
+        : null;
+
+    const sites = measuredSites
+        ? measureOverlaps(parcelFeature, measuredSites.filter((site) => site.distance < 1))
+            .map(({ distance, ...site }) => site)
+        : null;
+
+    const overlappingNames = new Set((sites || []).map((site) => site.name));
+    const nearbyByName = new Map();
+    (measuredSites || [])
+        .filter((site) => site.distance <= NEARBY_RADIUS && !overlappingNames.has(site.name))
+        .forEach((site) => {
+            const prev = nearbyByName.get(site.name);
+            if (!prev || site.distance < prev.distance) nearbyByName.set(site.name, site);
+        });
+    const nearbySites = measuredSites
+        ? [...nearbyByName.values()]
+            .sort((a, b) => a.distance - b.distance)
+            .slice(0, NEARBY_LIMIT)
+            .map((site) => ({ name: site.name, mapNo: site.mapNo, distance: Math.round(site.distance) }))
         : null;
 
     // 응답에는 도형 대신 겹친 면적만 넣음
@@ -215,6 +299,7 @@ module.exports = async function handler(req, res) {
         },
         zones: toResult(zones),
         sites: toResult(sites),
+        nearbySites,
         overlap: {
             area: roundArea(totalArea),
             ratio: roundArea((totalArea / parcelArea) * 100),
