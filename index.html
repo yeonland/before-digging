@@ -7,6 +7,9 @@
     <!-- 1. Leaflet CSS 스타일 불러오기 -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
+    <!-- 아이콘 (Font Awesome) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+
     <style>
         /* 지도를 담을 div는 반드시 높이(height)가 있어야 함! */
         #map { 
@@ -29,11 +32,13 @@
         }
         /* 내 위치 버튼 */
         .locate-button {
-            font-size: 16px;
-            text-decoration: none;
+            font-size: 15px;
+            color: #333;
+        }
+        .locate-button:hover {
+            color: #1d72b8;
         }
         .locate-button.is-loading {
-            opacity: 0.4;
             cursor: wait;
         }
         .map-legend .swatch {
@@ -260,7 +265,7 @@
             button.title = '내 위치로 이동';
             button.setAttribute('role', 'button');
             button.setAttribute('aria-label', '내 위치로 이동');
-            button.textContent = '📍';
+            button.innerHTML = '<i class="fa-solid fa-location-arrow" aria-hidden="true"></i>';
 
             L.DomEvent.disableClickPropagation(container);
             L.DomEvent.on(button, 'click', function(e) {
@@ -277,11 +282,17 @@
                 return;
             }
 
+            const icon = button.querySelector('i');
+            const stopLoading = () => {
+                button.classList.remove('is-loading');
+                icon.className = 'fa-solid fa-location-arrow';
+            };
             button.classList.add('is-loading');
+            icon.className = 'fa-solid fa-spinner fa-spin';
 
             navigator.geolocation.getCurrentPosition(
                 function(position) {
-                    button.classList.remove('is-loading');
+                    stopLoading();
                     const lat = position.coords.latitude;   // 위도
                     const lng = position.coords.longitude; // 경도
 
@@ -292,7 +303,7 @@
                         .openPopup();
                 },
                 function(error) {
-                    button.classList.remove('is-loading');
+                    stopLoading();
                     console.warn('위치 정보를 가져올 수 없습니다:', error.message);
                     alert('위치 정보를 가져올 수 없습니다. 브라우저의 위치 권한을 확인해 주세요.');
                 },
