@@ -27,6 +27,15 @@
             font-weight: bold;
             margin-bottom: 2px;
         }
+        /* 내 위치 버튼 */
+        .locate-button {
+            font-size: 16px;
+            text-decoration: none;
+        }
+        .locate-button.is-loading {
+            opacity: 0.4;
+            cursor: wait;
+        }
         .map-legend .swatch {
             display: inline-block;
             width: 14px;
@@ -242,24 +251,50 @@
             }).addTo(map);
         }
 
-        // 브라우저의 Geolocation 기능 지원 확인
-        if ("geolocation" in navigator) {
+        // 내 위치 버튼: 첫 화면에서 묻지 않고, 사용자가 원할 때만 위치 권한 요청
+        const locateControl = L.control({ position: 'topleft' });
+        locateControl.onAdd = function() {
+            const container = L.DomUtil.create('div', 'leaflet-bar');
+            const button = L.DomUtil.create('a', 'locate-button', container);
+            button.href = '#';
+            button.title = '내 위치로 이동';
+            button.setAttribute('role', 'button');
+            button.setAttribute('aria-label', '내 위치로 이동');
+            button.textContent = '📍';
+
+            L.DomEvent.disableClickPropagation(container);
+            L.DomEvent.on(button, 'click', function(e) {
+                L.DomEvent.preventDefault(e);
+                findMyLocation(button);
+            });
+            return container;
+        };
+        locateControl.addTo(map);
+
+        function findMyLocation(button) {
+            if (!('geolocation' in navigator)) {
+                alert('이 브라우저는 위치 정보를 지원하지 않습니다.');
+                return;
+            }
+
+            button.classList.add('is-loading');
+
             navigator.geolocation.getCurrentPosition(
                 function(position) {
+                    button.classList.remove('is-loading');
                     const lat = position.coords.latitude;   // 위도
                     const lng = position.coords.longitude; // 경도
 
-                    console.log("내 위치:", lat, lng);
-
                     // 지도의 중심을 내 위치로 이동 (지적도가 보이는 줌 레벨 17)
                     map.setView([lat, lng], 17);
-
-                    // 내 위치에 마커 꽂기
-                    placeMarker([lat, lng]).bindPopup('내 위치').openPopup();
+                    placeMarker([lat, lng])
+                        .bindPopup('내 위치<br><span style="font-size: 12px; color: #666;">진단하려면 지도에서 필지를 눌러주세요.</span>')
+                        .openPopup();
                 },
                 function(error) {
-                    console.warn("위치 정보를 가져올 수 없습니다: ", error.message);
-                    alert("위치 정보 권한이 거부되었거나 지원되지 않습니다. 서울시청 기준으로 표시됩니다.");
+                    button.classList.remove('is-loading');
+                    console.warn('위치 정보를 가져올 수 없습니다:', error.message);
+                    alert('위치 정보를 가져올 수 없습니다. 브라우저의 위치 권한을 확인해 주세요.');
                 },
                 {
                     enableHighAccuracy: true,
@@ -267,8 +302,6 @@
                     maximumAge: 0
                 }
             );
-        } else {
-            alert("이 브라우저는 위치 정보를 지원하지 않습니다.");
         }
 
         // 검색창 이벤트
