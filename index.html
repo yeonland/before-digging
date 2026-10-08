@@ -35,6 +35,11 @@
         </button>
     </div>
 
+    <!-- 데이터 출처 표시 -->
+    <p id="data-source" style="margin: 0 0 10px 0; font-size: 12px; color: #666;">
+        출처: 국가유산청 국가유산 공간정보서비스(문화유적분포지도), 국토교통부 브이월드(국가유산 지정/보호구역, 지적도), OpenStreetMap
+    </p>
+
     <!-- 3. Leaflet 자바스크립트 불러오기 -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -90,27 +95,80 @@
             }
         ).addTo(map);
 
+        // 국가유산청 문화유적분포지도 (줌 15부터 1.2km 칸 단위로 도형을 받아 그림)
+        const SITES_MIN_ZOOM = 15;
+        const sitesLayer = L.geoJSON(null, {
+            interactive: false,
+            style: {
+                color: '#1d72b8',
+                weight: 1.5,
+                fillColor: '#4ea8de',
+                fillOpacity: 0.3
+            }
+        }).addTo(map);
+        const loadedSiteTiles = new Set();
+        const loadedSiteIds = new Set();
+
+        function loadSites() {
+            if (!map.hasLayer(sitesLayer) || map.getZoom() < SITES_MIN_ZOOM) return;
+
+            const bounds = map.getBounds();
+            const min = map.project(bounds.getNorthWest(), SITES_MIN_ZOOM).divideBy(256).floor();
+            const max = map.project(bounds.getSouthEast(), SITES_MIN_ZOOM).divideBy(256).floor();
+
+            for (let x = min.x; x <= max.x; x++) {
+                for (let y = min.y; y <= max.y; y++) {
+                    const tileKey = `${x}/${y}`;
+                    if (loadedSiteTiles.has(tileKey)) continue;
+                    loadedSiteTiles.add(tileKey);
+
+                    fetch(`/api/heritage-sites?x=${x}&y=${y}`)
+                        .then(response => {
+                            if (!response.ok) throw new Error('문화유적분포지도 조회 실패');
+                            return response.json();
+                        })
+                        .then(data => {
+                            // 여러 칸에 걸친 유적은 한 번만 그림
+                            const newFeatures = data.features.filter(feature => !loadedSiteIds.has(feature.properties.id));
+                            newFeatures.forEach(feature => loadedSiteIds.add(feature.properties.id));
+                            sitesLayer.addData(newFeatures);
+                        })
+                        .catch(error => {
+                            console.error('문화유적분포지도 불러오기 오류:', error);
+                            loadedSiteTiles.delete(tileKey); // 다음 이동 때 다시 시도
+                        });
+                }
+            }
+        }
+
+        map.on('moveend overlayadd', loadSites);
+        loadSites();
+
         // 지도 컨트롤 버튼 생성
         const overlayMaps = {
             "지적도 표시": cadastralLayer,
-            "국가유산 구역 표시": heritageLayer
+            "국가유산 구역 표시": heritageLayer,
+            "문화유적 분포 범위 표시": sitesLayer
         };
         L.control.layers(null, overlayMaps).addTo(map);
 
-        // 지적도가 켜져 있는데 줌이 부족하면 안내 문구 표시
+        // 켜져 있는 레이어가 현재 줌에서 안 보이면 안내 문구 표시
         const CADASTRAL_MIN_ZOOM = 17;
         const zoomHint = L.control({ position: 'bottomleft' });
         zoomHint.onAdd = function() {
             const div = L.DomUtil.create('div');
             div.style.cssText = 'background: white; padding: 6px 10px; font-size: 13px; border-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.3);';
-            div.textContent = '지적도는 더 확대하면 표시됩니다.';
             return div;
         };
 
         function updateZoomHint() {
-            const needsZoom = map.hasLayer(cadastralLayer) && map.getZoom() < CADASTRAL_MIN_ZOOM;
-            if (needsZoom) {
+            const hidden = [];
+            if (map.hasLayer(sitesLayer) && map.getZoom() < SITES_MIN_ZOOM) hidden.push('문화유적 분포 범위');
+            if (map.hasLayer(cadastralLayer) && map.getZoom() < CADASTRAL_MIN_ZOOM) hidden.push('지적도');
+
+            if (hidden.length > 0) {
                 zoomHint.addTo(map);
+                zoomHint.getContainer().textContent = `${hidden.join(', ')}는 더 확대하면 표시됩니다.`;
             } else {
                 zoomHint.remove();
             }
@@ -205,7 +263,7 @@
 
             const clickedLatlng = e.latlng;
             clickMarker = L.marker(clickedLatlng).addTo(map);
-            clickMarker.bindPopup('국가유산 구역 확인 중...').openPopup();
+            clickMarker.bindPopup('국가유산 데이터 확인 중...').openPopup();
 
             const url = `/api/heritage?lat=${clickedLatlng.lat}&lng=${clickedLatlng.lng}`;
 
@@ -216,29 +274,50 @@
                     }
                     return response.json();
                 })
-                .then(data => showResult(clickMarker, data.zones))
+                .then(data => showResult(clickMarker, data))
                 .catch(error => {
                     console.error('국가유산 구역 조회 오류:', error);
                     clickMarker.setPopupContent('국가유산 구역을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
                 });
         });
 
-        function showResult(marker, zones) {
-            if (zones.length > 0) {
-                const items = zones
+        function showResult(marker, data) {
+            const zones = data.zones || [];
+            // 같은 이름의 유적이 여러 번 등록된 경우 한 번만 표시
+            const sites = (data.sites || []).filter((site, index, list) =>
+                list.findIndex(other => other.name === site.name) === index
+            );
+            const failed = data.zones === null || data.sites === null;
+            const failNote = failed
+                ? '<p style="margin: 5px 0 0 0; font-size: 12px; color: #666;">※ 일부 데이터를 불러오지 못해 결과가 불완전할 수 있습니다.</p>'
+                : '';
+
+            if (zones.length > 0 || sites.length > 0) {
+                const zoneItems = zones
                     .map(zone => `<li>${escapeHtml(zone.name || '이름 없음')} <span style="color: #666;">(${escapeHtml(zone.type)})</span></li>`)
+                    .join('');
+                const siteItems = sites
+                    .map(site => `<li>${escapeHtml(site.name || '이름 없음')} <span style="color: #666;">(문화유적 분포 범위)</span></li>`)
                     .join('');
                 marker.setPopupContent(`
                     <div style="padding: 5px;">
-                        <h4 style="margin: 0 0 5px 0; color: #e63946;">국가유산 구역 해당</h4>
+                        <h4 style="margin: 0 0 5px 0; color: #e63946;">국가유산 관련 영역 해당</h4>
                         <p style="margin: 0; font-size: 13px;"><b>확인 결과:</b> 🔴 관련 영역에 포함됩니다.</p>
-                        <ul style="margin: 5px 0 0 0; padding-left: 18px; font-size: 13px;">${items}</ul>
+                        <ul style="margin: 5px 0 0 0; padding-left: 18px; font-size: 13px;">${zoneItems}${siteItems}</ul>
+                        ${failNote}
+                    </div>
+                `);
+            } else if (failed) {
+                marker.setPopupContent(`
+                    <div style="padding: 5px;">
+                        <h4 style="margin: 0 0 5px 0; color: #666;">확인된 영역 없음</h4>
+                        <p style="margin: 0; font-size: 13px;">조회된 범위에서는 관련 영역이 없지만, 일부 데이터를 불러오지 못했습니다. 잠시 후 다시 확인해 주세요.</p>
                     </div>
                 `);
             } else {
                 marker.setPopupContent(`
                     <div style="padding: 5px;">
-                        <h4 style="margin: 0 0 5px 0; color: #2a9d8f;">국가유산 구역 외 지역</h4>
+                        <h4 style="margin: 0 0 5px 0; color: #2a9d8f;">국가유산 관련 영역 외 지역</h4>
                         <p style="margin: 0; font-size: 13px;"><b>확인 결과:</b> 🟢 관련 영역에 포함되지 않습니다.</p>
                     </div>
                 `);
