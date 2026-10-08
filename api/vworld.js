@@ -1,5 +1,6 @@
 const ALLOWED_LAYERS = new Set([
-    'lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun'
+    'lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun',
+    'lt_c_uo301'
 ]);
 
 module.exports = async function handler(req, res) {

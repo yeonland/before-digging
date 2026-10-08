@@ -38,9 +38,6 @@
     <!-- 3. Leaflet 자바스크립트 불러오기 -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <!-- Point-in-Polygon(leaflet-pip) 외부 라이브러리 CDN 링크 -->
-    <script src="https://unpkg.com/@mapbox/leaflet-pip@latest/leaflet-pip.js"></script>
-
     <script>
         // 지도 초기화 (서울 시청 위경도 좌표 [37.5665, 126.9780], 줌 레벨 13)
         const map = L.map('map').setView([37.5665, 126.9780], 13);
@@ -75,9 +72,28 @@
             }
         ).addTo(map);
 
+        // VWorld 국가유산 지정/보호구역 WMS 레이어 생성 (줌 10부터 표시됨)
+        const heritageLayer = L.tileLayer.wms(
+            '/api/vworld',
+            {
+                service: 'WMS',
+                request: 'GetMap',
+                version: '1.3.0',
+                layers: 'lt_c_uo301',
+                styles: 'lt_c_uo301',
+                format: 'image/png',
+                transparent: true,
+                opacity: 0.6,
+                crs: L.CRS.EPSG3857,
+                minZoom: 10,
+                maxZoom: 19
+            }
+        ).addTo(map);
+
         // 지도 컨트롤 버튼 생성
         const overlayMaps = {
-            "지적도 표시": cadastralLayer
+            "지적도 표시": cadastralLayer,
+            "국가유산 구역 표시": heritageLayer
         };
         L.control.layers(null, overlayMaps).addTo(map);
 
@@ -175,66 +191,59 @@
                 });
         });
 
-        // 외부 GeoJSON 파일로부터 문화재 유존지역 불러오기
-    let heritageLayer = null;
-
-    fetch('./data/heritage-zones.geojson')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('GeoJSON 파일을 불러오지 못했습니다.');
-            }
-
-            return response.json();
-        })
-        .then(data => {
-            heritageLayer = L.geoJSON(data, {
-                style: {
-                    color: '#e63946',
-                    weight: 2,
-                    fillColor: '#ffb703',
-                    fillOpacity: 0.5
-                }
-            }).addTo(map);
-
-            console.log('문화재 유존지역 불러오기 성공:', data);
-        })
-        .catch(error => {
-            console.error('GeoJSON 불러오기 오류:', error);
-        });
-        
+        // 팝업에 넣는 VWorld 텍스트의 HTML 특수문자 처리
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
         let clickMarker = null;
 
         map.on('click', function(e) {
-            // GeoJSON이 아직 로딩되지 않았으면 클릭 처리 중단
-            if (!heritageLayer) {
-                alert('문화재 유존지역 데이터를 불러오는 중입니다.');
-                return;
-            }
             if (clickMarker) map.removeLayer(clickMarker);
 
             const clickedLatlng = e.latlng;
             clickMarker = L.marker(clickedLatlng).addTo(map);
+            clickMarker.bindPopup('국가유산 구역 확인 중...').openPopup();
 
-            const results = leafletPip.pointInLayer(clickedLatlng, heritageLayer);
+            const url = `/api/heritage?lat=${clickedLatlng.lat}&lng=${clickedLatlng.lng}`;
 
-            if (results.length > 0) {
-                const zoneName = results[0].feature.properties.name || "인근 문화재 확인 영역";
-                clickMarker.bindPopup(`
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('국가유산 구역 조회 실패');
+                    }
+                    return response.json();
+                })
+                .then(data => showResult(clickMarker, data.zones))
+                .catch(error => {
+                    console.error('국가유산 구역 조회 오류:', error);
+                    clickMarker.setPopupContent('국가유산 구역을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+                });
+        });
+
+        function showResult(marker, zones) {
+            if (zones.length > 0) {
+                const items = zones
+                    .map(zone => `<li>${escapeHtml(zone.name || '이름 없음')} <span style="color: #666;">(${escapeHtml(zone.type)})</span></li>`)
+                    .join('');
+                marker.setPopupContent(`
                     <div style="padding: 5px;">
-                        <h4 style="margin: 0 0 5px 0; color: #e63946;">${zoneName}</h4>
+                        <h4 style="margin: 0 0 5px 0; color: #e63946;">국가유산 구역 해당</h4>
                         <p style="margin: 0; font-size: 13px;"><b>확인 결과:</b> 🔴 관련 영역에 포함됩니다.</p>
+                        <ul style="margin: 5px 0 0 0; padding-left: 18px; font-size: 13px;">${items}</ul>
                     </div>
-                `).openPopup();
+                `);
             } else {
-                clickMarker.bindPopup(`
+                marker.setPopupContent(`
                     <div style="padding: 5px;">
-                        <h4 style="margin: 0 0 5px 0; color: #2a9d8f;">유존구역 외 지역</h4>
+                        <h4 style="margin: 0 0 5px 0; color: #2a9d8f;">국가유산 구역 외 지역</h4>
                         <p style="margin: 0; font-size: 13px;"><b>확인 결과:</b> 🟢 관련 영역에 포함되지 않습니다.</p>
                     </div>
-                `).openPopup();
+                `);
             }
-        });
+        }
     </script>
 </body>
 </html>
