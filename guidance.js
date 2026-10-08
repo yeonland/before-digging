@@ -227,5 +227,121 @@
         return cost;
     }
 
+    // ---------------------------------------------------------------
+    // 위험도 등급: 공사할 때 문화유산 때문에 절차나 조사가 생길 가능성 (참고용 서비스 기준)
+    // 위에서부터 확인해 처음 걸리는 등급으로 정하고, 해당되는 근거는 모두 보여줌
+    // ---------------------------------------------------------------
+    const RISK = {
+        nearbyDistance: NEARBY_CAUTION_DISTANCE, // 이 거리 안에 문화유적 분포 범위가 있으면 주의 (m)
+        excavationRadius: 200, // 이 반경 안의
+        excavationCount: 3 // 발굴·시굴조사가 이만큼 이상이면 주의
+    };
+
+    const RISK_LEVELS = {
+        high: { label: '높음', icon: '🔴', summary: '공사 전에 문화유산 절차가 필요할 가능성이 높은 땅이에요.' },
+        caution: { label: '주의', icon: '🟡', summary: '문화유산 절차가 생기거나 주변에 유적이 있을 수 있는 땅이에요.' },
+        low: { label: '낮음', icon: '🟢', summary: '확인된 자료에서는 문화유산 관련 근거가 없는 땅이에요.' },
+        unknown: { label: '확인 불가', icon: '⚪', summary: '일부 자료를 불러오지 못해 등급을 정하지 못했어요.' }
+    };
+
+    // 화면의 "등급 기준 보기"에 그대로 보여주는 기준표
+    const RISK_CRITERIA = [
+        {
+            level: 'high',
+            rules: [
+                '문화유적 분포 범위에 걸침 (10㎡ 이상) → 매장유산 유존지역',
+                '국가·시도 지정유산 구역에 걸침',
+                '지표조사로 유적이 확인된 범위에 걸침'
+            ]
+        },
+        {
+            level: 'caution',
+            rules: [
+                '역사문화환경 보존지역이나 보호구역에 걸침',
+                `문화유적 분포 범위가 ${RISK.nearbyDistance}m 안에 있음`,
+                '필지에 예전 발굴·시굴조사 기록이 있음',
+                `주변 ${RISK.excavationRadius}m 안에 발굴·시굴조사가 ${RISK.excavationCount}건 이상`,
+                '유적 범위가 필지 경계에만 살짝 걸침 (10㎡ 미만)'
+            ]
+        },
+        {
+            level: 'low',
+            rules: ['위 기준에 하나도 해당하지 않음']
+        },
+        {
+            level: 'unknown',
+            rules: ['자료 일부를 불러오지 못했고, 불러온 자료에서는 높음·주의 근거가 없음']
+        }
+    ];
+
+    function buildRisk(result) {
+        const area = classify(result);
+        const surveys = result.surveys || [];
+        const onParcel = surveys.filter((survey) => survey.distance === 0);
+        const high = [];
+        const caution = [];
+
+        // 높음
+        if (area.inSites) {
+            const ratio = result.overlap && result.overlap.siteRatio;
+            high.push(ratio
+                ? `문화유적 분포 범위에 필지의 ${ratio}%가 걸쳐요`
+                : '문화유적 분포 범위에 걸쳐요');
+        }
+        if (area.inDesignated) {
+            high.push('국가·시도 지정유산 구역에 걸쳐요');
+        }
+        const surfaceSite = onParcel.find((survey) => survey.kind === 'surfaceSite');
+        if (surfaceSite) {
+            high.push(`지표조사로 유적이 확인된 범위에 걸쳐요 ('${surfaceSite.name}')`);
+        }
+
+        // 주의
+        if (area.inHistoricEnv) caution.push('역사문화환경 보존지역에 걸쳐요');
+        if (area.inProtection) caution.push('국가유산 보호구역에 걸쳐요');
+
+        const nearest = (result.nearbySites || [])[0];
+        if (!area.inSites && nearest && nearest.distance <= RISK.nearbyDistance) {
+            caution.push(`문화유적 분포 범위가 약 ${nearest.distance}m 떨어져 있어요 ('${nearest.name}')`);
+        }
+
+        const pastExcavations = onParcel.filter((survey) => survey.kind === 'excavation');
+        if (pastExcavations.length > 0) {
+            const years = pastExcavations.map((survey) => survey.year).filter(Boolean);
+            caution.push(`필지에 예전 발굴·시굴조사 기록이 ${pastExcavations.length}건 있어요${years.length ? ` (${Math.min(...years)}~${Math.max(...years)}년)` : ''}`);
+        }
+
+        const nearbyExcavations = result.surveyStats ? result.surveyStats.excavationsWithin200 : null;
+        if (nearbyExcavations !== null && nearbyExcavations >= RISK.excavationCount) {
+            caution.push(`주변 ${RISK.excavationRadius}m 안에서 발굴·시굴조사가 ${nearbyExcavations}건 있었어요`);
+        }
+
+        if (area.edgeOnly) caution.push('유적 관련 범위가 필지 경계에만 살짝 걸쳐요 (도면 오차일 수 있음)');
+
+        const incomplete = area.incomplete || result.surveys === null || result.nearbySites === null;
+        let level;
+        if (high.length > 0) level = 'high';
+        else if (caution.length > 0) level = 'caution';
+        else if (incomplete) level = 'unknown';
+        else level = 'low';
+
+        const reasons = [...high, ...caution];
+        if (level === 'low') {
+            reasons.push('주변 500m 안 자료를 확인했지만 위 기준에 해당하는 근거가 없어요');
+        }
+        if (incomplete) {
+            reasons.push('일부 자료(국가유산 구역, 문화유적 분포 범위, 조사 이력 중)를 불러오지 못했어요. 잠시 후 다시 확인해 보세요');
+        }
+
+        return {
+            level,
+            ...RISK_LEVELS[level],
+            reasons,
+            incomplete,
+            criteria: RISK_CRITERIA.map((group) => ({ ...group, ...RISK_LEVELS[group.level] }))
+        };
+    }
+
     window.buildGuidance = buildGuidance;
+    window.buildRisk = buildRisk;
 })();

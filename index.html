@@ -186,6 +186,54 @@
             font-size: 13px;
         }
 
+        /* 위험도 등급 */
+        .risk-box {
+            margin: 10px 0 4px 0;
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
+        .risk-box.high { background: #fdecee; border-color: #f3b4bb; }
+        .risk-box.caution { background: #fff6dd; border-color: #f0d58a; }
+        .risk-box.low { background: #e9f6f3; border-color: #a9dbcf; }
+        .risk-box.unknown { background: #f2f2f2; border-color: #ccc; }
+        .risk-title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .risk-box ul {
+            margin: 6px 0 0 0;
+            padding-left: 18px;
+        }
+        .risk-note {
+            margin: 6px 0 0 0;
+            font-size: 12px;
+            color: #666;
+        }
+        .risk-criteria {
+            margin-top: 6px;
+            font-size: 13px;
+        }
+        .risk-criteria summary {
+            cursor: pointer;
+            color: #1d72b8;
+        }
+        .risk-criteria table {
+            margin-top: 6px;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .risk-criteria th,
+        .risk-criteria td {
+            padding: 4px 6px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            text-align: left;
+            vertical-align: top;
+        }
+        .risk-criteria th {
+            white-space: nowrap;
+        }
+
         /* 진단 결과 패널 */
         #result-panel {
             max-width: 720px;
@@ -750,9 +798,13 @@
                 summary = '<p style="margin: 0; font-size: 13px;"><b>확인 결과:</b> 🟢 필지가 관련 영역에 포함되지 않습니다.</p>';
             }
 
+            const risk = window.buildRisk(data);
+            const riskLine = `<p style="margin: 0 0 6px 0; font-size: 13px;"><b>위험도 ${risk.icon} ${escapeHtml(risk.label)}</b> <span style="color: #666; font-size: 12px;">(참고자료)</span></p>`;
+
             marker.setPopupContent(`
                 <div style="padding: 5px;">
                     ${title}
+                    ${riskLine}
                     ${parcelInfo}
                     ${summary}
                     ${realList}
@@ -799,6 +851,7 @@
             resultPanel.innerHTML = `
                 <h3>진단 결과 · 해야 할 일</h3>
                 <p class="panel-sub">${escapeHtml(data.parcel.address)} · 필지 면적 ${formatArea(data.parcel.area)}</p>
+                ${renderRisk(window.buildRisk(data))}
                 <div class="inputs">
                     <label>공사 종류 <select id="work-type">${workOptions}</select></label>
                     <label>사업(대지) 면적 <input id="land-area" type="number" min="0" step="1" value="${Math.round(data.parcel.area)}"> ㎡</label>
@@ -812,6 +865,29 @@
                 element.addEventListener('input', renderGuidance);
             });
             renderGuidance();
+        }
+
+        // 위험도 등급 박스: 등급, 해당 이유, 펼쳐보는 등급 기준표
+        function renderRisk(risk) {
+            const reasons = risk.reasons.map(reason => `<li>${escapeHtml(reason)}</li>`).join('');
+            const criteriaRows = risk.criteria.map(group => `
+                <tr>
+                    <th>${group.icon} ${escapeHtml(group.label)}</th>
+                    <td>${group.rules.map(rule => escapeHtml(rule)).join('<br>')}</td>
+                </tr>`).join('');
+
+            return `
+                <div class="risk-box ${risk.level}">
+                    <div class="risk-title">위험도 ${risk.icon} ${escapeHtml(risk.label)}</div>
+                    <div>${escapeHtml(risk.summary)}</div>
+                    <ul>${reasons}</ul>
+                    <details class="risk-criteria">
+                        <summary>산정 근거 보기</summary>
+                        <p class="risk-note" style="margin-top: 6px;">위에서부터 확인해 처음 해당하는 등급으로 정하고, 해당하는 이유는 모두 보여줘요.</p>
+                        <table>${criteriaRows}</table>
+                    </details>
+                    <p class="risk-note">위험도는 참고자료일 뿐이에요.</p>
+                </div>`;
         }
 
         function lawDetails(law) {

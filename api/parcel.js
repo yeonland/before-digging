@@ -280,6 +280,7 @@ module.exports = async function handler(req, res) {
 
     // 주변 조사 이력: 500m 안의 조사구역을 가까운 순으로 (같은 이름·종류는 하나만)
     let surveys = null;
+    let surveyStats = null;
     if (surveysResult.status === 'fulfilled') {
         const byKey = new Map();
         surveysResult.value
@@ -290,7 +291,17 @@ module.exports = async function handler(req, res) {
                 const prev = byKey.get(key);
                 if (!prev || survey.distance < prev.distance) byKey.set(key, survey);
             });
-        surveys = [...byKey.values()]
+        const uniqueSurveys = [...byKey.values()];
+
+        // 위험도 등급용: 목록을 10건으로 자르기 전에 반경별 발굴·시굴조사 건수를 셈
+        const countExcavations = (radius) => uniqueSurveys
+            .filter((survey) => survey.kind === 'excavation' && survey.distance <= radius).length;
+        surveyStats = {
+            excavationsWithin200: countExcavations(200),
+            excavationsWithin500: countExcavations(NEARBY_RADIUS)
+        };
+
+        surveys = uniqueSurveys
             .sort((a, b) => a.distance - b.distance)
             .slice(0, SURVEY_LIMIT)
             .map(({ geometry, distance, ...survey }) => ({
@@ -335,6 +346,7 @@ module.exports = async function handler(req, res) {
         sites: toResult(sites),
         nearbySites,
         surveys,
+        surveyStats,
         overlap: {
             area: roundArea(totalArea),
             ratio: roundArea((totalArea / parcelArea) * 100),
