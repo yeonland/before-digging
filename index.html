@@ -190,7 +190,7 @@
         L.control.layers(null, overlayMaps).addTo(map);
 
         // 범례: 지도 색깔이 무엇을 뜻하는지 표시 (VWorld 색은 GetLegendGraphic 기준)
-        const legend = L.control({ position: 'bottomright' });
+        const legend = L.control({ position: 'bottomleft' });
         legend.onAdd = function() {
             const div = L.DomUtil.create('div', 'map-legend');
             div.innerHTML = `
@@ -257,7 +257,7 @@
         }
 
         // 내 위치 버튼: 첫 화면에서 묻지 않고, 사용자가 원할 때만 위치 권한 요청
-        const locateControl = L.control({ position: 'topleft' });
+        const locateControl = L.control({ position: 'bottomright' });
         locateControl.onAdd = function() {
             const container = L.DomUtil.create('div', 'leaflet-bar');
             const button = L.DomUtil.create('a', 'locate-button', container);
