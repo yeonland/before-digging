@@ -1,10 +1,17 @@
 # 관련 법령 개정 자동 확인: 매주 월요일 오전 9시(한국 시간)에 실행하고, 바뀌면 이슈를 만든다
+# (자동 기록 커밋은 data/ 파일만 바꾸므로 push 조건에 걸리지 않아 반복 실행되지 않음)
 name: 법령 개정 확인
 
 on:
   schedule:
     - cron: '0 0 * * 1'
   workflow_dispatch:
+  # 확인 스크립트나 이 설정을 고쳐서 올리면 바로 한 번 실행해서 동작을 확인
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/check-laws.mjs'
+      - '.github/workflows/law-watch.yml'
 
 permissions:
   contents: write
