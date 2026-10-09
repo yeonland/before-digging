@@ -742,7 +742,7 @@
         function showParcelResult(marker, data) {
             const parcel = data.parcel;
             const items = [
-                ...(data.zones || []).map(zone => ({ name: zone.name, type: zone.type, overlapArea: zone.overlapArea, overlapRatio: zone.overlapRatio, edgeOnly: zone.edgeOnly })),
+                ...(data.zones || []).map(zone => ({ name: zone.name, type: window.isNaturalZone(zone) ? `${zone.type} · 자연유산` : zone.type, natural: window.isNaturalZone(zone), overlapArea: zone.overlapArea, overlapRatio: zone.overlapRatio, edgeOnly: zone.edgeOnly })),
                 ...dedupeSites(data.sites || []).map(site => ({ name: site.name || '이름 없음', type: '문화유적 분포 범위', overlapArea: site.overlapArea, overlapRatio: site.overlapRatio, edgeOnly: site.edgeOnly }))
             ].sort((a, b) => b.overlapArea - a.overlapArea);
 
@@ -784,7 +784,11 @@
 
             let title;
             let summary;
-            if (realItems.length > 0) {
+            if (realItems.length > 0 && realItems.every(item => item.natural)) {
+                // 자연유산 구역만 걸친 경우: 매장유산 위험도와 별개라 빨간색으로 표시하지 않음
+                title = '<h4 style="margin: 0 0 5px 0; color: #e9a400;">자연유산 구역 해당</h4>';
+                summary = `<p style="margin: 0; font-size: 13px;"><b>확인 결과:</b> ℹ️ 필지의 <b>${data.overlap.ratio}% (${formatArea(data.overlap.area)})</b>가 자연유산 구역에 걸칩니다. (땅속 유물 절차와는 별개)</p>`;
+            } else if (realItems.length > 0) {
                 title = '<h4 style="margin: 0 0 5px 0; color: #e63946;">국가유산 관련 영역 해당</h4>';
                 summary = `<p style="margin: 0; font-size: 13px;"><b>확인 결과:</b> 🔴 필지의 <b>${data.overlap.ratio}% (${formatArea(data.overlap.area)})</b>가 관련 영역에 걸칩니다.</p>`;
             } else if (edgeItems.length > 0) {

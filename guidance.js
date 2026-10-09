@@ -42,12 +42,24 @@
         cost: '국가유산영향진단법 제10조제2항, 매장유산 보호 및 조사에 관한 법률 제11조제3항',
         support: '매장유산 보호 및 조사에 관한 법률 제11조제3항 단서, 같은 법 시행령 제10조',
         contract: '매장유산 보호 및 조사에 관한 법률 제24조제4항',
-        discovery: '매장유산 보호 및 조사에 관한 법률 제5조제2항, 제17조'
+        discovery: '매장유산 보호 및 조사에 관한 법률 제5조제2항, 제17조',
+        natural: '자연유산의 보존 및 활용에 관한 법률 (허가 조문 확인 중)'
     };
+
+    // 국가유산 구역 자료(VWorld)에는 문화유산·자연유산을 나누는 칸이 없어 이름으로 구분
+    // 천연기념물·명승 같은 자연유산 구역은 매장유산 유존지역 판단과 위험도에서 빼고 안내만 함
+    // 이름이 없는 구역은 구분할 수 없어 문화유산으로 봄 (안전한 쪽)
+    const NATURAL_NAME = /철새|도래지|서식지|번식지|군락|자생지|나무|노거수|숲|수림|상록수|동굴|주상절리|화석|습지|폭포|계곡|천연보호구역/;
+
+    function isNaturalZone(zone) {
+        return NATURAL_NAME.test((zone && zone.name) || '');
+    }
 
     // 진단 결과에서 어떤 영역에 걸치는지 정리 (경계에만 걸친 것은 제외)
     function classify(result) {
-        const zones = (result.zones || []).filter((zone) => !zone.edgeOnly);
+        const naturalZones = (result.zones || []).filter((zone) => !zone.edgeOnly && isNaturalZone(zone));
+        const heritageZones = (result.zones || []).filter((zone) => !isNaturalZone(zone));
+        const zones = heritageZones.filter((zone) => !zone.edgeOnly);
         const sites = (result.sites || []).filter((site) => !site.edgeOnly);
         const isDesignated = (type) => /지정문화재구역|지정유산구역/.test(type || '');
 
@@ -58,9 +70,15 @@
             inDesignated: zones.some((zone) => isDesignated(zone.type)),
             inProtection: zones.some((zone) => /보호구역/.test(zone.type || '')),
             inHistoricEnv: zones.some((zone) => /역사문화환경/.test(zone.type || '')),
-            edgeOnly: [...(result.zones || []), ...(result.sites || [])].some((item) => item.edgeOnly),
+            edgeOnly: [...heritageZones, ...(result.sites || [])].some((item) => item.edgeOnly),
+            naturalNames: [...new Set(naturalZones.map((zone) => zone.name))],
             incomplete: result.zones === null || result.sites === null
         };
+    }
+
+    // "시굴조사(2017년)"처럼 조사 종류와 연도
+    function surveyLabel(survey) {
+        return `${survey.method}${survey.year ? `(${survey.year}년)` : ''}`;
     }
 
     // input: { workType, landArea, floorArea } (workType: '', house, farm, business, factory, other)
@@ -121,6 +139,16 @@
             });
         }
 
+        // 3-1. 자연유산 구역 (매장유산 절차와 별개라 위험도에는 넣지 않고 안내만)
+        if (area.naturalNames.length > 0) {
+            steps.push({
+                level: 'check',
+                title: '자연유산 구역에 걸쳐요',
+                body: `'${area.naturalNames.join("', '")}'은(는) 천연기념물·명승 같은 자연유산 구역으로 보여요. 땅속 유물(매장유산) 절차와는 별개라 위험도에는 넣지 않았어요. 다만 자연유산 구역과 그 주변에서 공사하려면 현상변경 허가가 필요할 수 있으니 관할 시·군·구에 문의해 보세요.`,
+                law: LAW.natural
+            });
+        }
+
         // 4. 경계에만 걸친 영역 (지적도와 구역도의 도면 오차일 수 있음)
         if (area.edgeOnly) {
             steps.push({
@@ -147,12 +175,37 @@
         const pastExcavations = onParcel.filter((survey) => survey.kind === 'excavation');
         const surfaceSites = onParcel.filter((survey) => survey.kind === 'surfaceSite');
 
-        if (surfaceSites.length > 0 && !area.inSites) {
+        if (surfaceSites.length > 0) {
+            const site = surfaceSites[0];
+            const followUps = site.followUps || [];
+            const shown = followUps.slice(0, 3).map(surveyLabel).join(', ');
+            const followUpText = followUps.length > 0
+                ? ` 같은 범위에서 그 뒤에 ${shown}${followUps.length > 3 ? ` 외 ${followUps.length - 3}건의` : ''} 기록이 있어요. 그 조사 결과도 함께 확인해 보세요.`
+                : ' 같은 범위에서 그 뒤에 한 표본·시굴·발굴조사 기록은 찾지 못했어요.';
             steps.push({
                 level: 'check',
                 title: '지표조사에서 유적이 확인된 범위에 걸쳐요',
-                body: `'${surfaceSites[0].name}' 범위에 걸쳐 있어요. 국가유산청이 검토한 조사 보고서에 매장유산이 있다고 표시된 지역이면 매장유산 유존지역에 해당해 영향진단 대상이 될 수 있어요. 관할 시·군·구에 확인해 보세요.`,
+                body: `'${site.name}' 범위에 걸쳐 있어요${site.report ? ` (보고서: ${site.report})` : ''}. 지표조사에서 확인됐다고 모두 조사가 필요한 건 아니고, 보고서의 조사 의견에 따라 달라져요. 보통 유물이 흩어져 보이는 유물산포지는 표본·시굴조사로 확인하고, 문화층이 나오면 발굴조사로 이어져요.${followUpText} 보고서는 관할 시·군·구나 조사기관에 요청해 볼 수 있어요. 국가유산청이 검토해 매장유산이 있다고 표시한 지역이면 유존지역에 해당해 영향진단 대상이 될 수 있으니 함께 확인해 보세요.`,
                 law: `${LAW.remainsRange} (유존지역 범위), ${LAW.diagnosisRemains}`
+            });
+        }
+
+        // 지표조사 구역 안이지만 유적 확인 범위에는 안 걸칠 때: 조사 결과(유적 유무)를 참고로 안내
+        const surfaceAreas = onParcel.filter((survey) => survey.kind === 'surface');
+        if (surfaceSites.length === 0 && surfaceAreas.length > 0) {
+            const notFound = surfaceAreas.filter((survey) => survey.siteFound === false);
+            const found = surfaceAreas.filter((survey) => survey.siteFound === true);
+            const main = found[0] || notFound[0] || surfaceAreas[0];
+            const result = found.length > 0
+                ? '조사 구역 안에서 유적이 확인됐지만, 확인된 유적 범위는 이 필지에 걸치지 않아요.'
+                : notFound.length > 0
+                    ? '그 조사에서는 유적이 확인되지 않았어요.'
+                    : '조사 결과(유적 유무)는 자료에서 확인되지 않아요.';
+            steps.push({
+                level: 'info',
+                title: '예전 지표조사 구역 안에 있어요',
+                body: `'${main.name}'${main.year ? ` (${main.year}년)` : ''} 지표조사 구역에 걸쳐 있어요. ${result} 오래된 조사이거나 공사 범위가 다르면 다시 조사가 필요할 수 있어요.`,
+                law: null
             });
         }
 
@@ -241,7 +294,8 @@
         high: { label: '높음', icon: '🔴', summary: '공사 전에 문화유산 절차가 필요할 가능성이 높은 땅이에요.' },
         caution: { label: '주의', icon: '🟡', summary: '문화유산 절차가 생기거나 주변에 유적이 있을 수 있는 땅이에요.' },
         low: { label: '낮음', icon: '🟢', summary: '확인된 자료에서는 문화유산 관련 근거가 없는 땅이에요.' },
-        unknown: { label: '확인 불가', icon: '⚪', summary: '일부 자료를 불러오지 못해 등급을 정하지 못했어요.' }
+        unknown: { label: '확인 불가', icon: '⚪', summary: '일부 자료를 불러오지 못해 등급을 정하지 못했어요.' },
+        note: { label: '참고', icon: 'ℹ️', summary: '' } // 기준표에만 쓰는 설명 줄
     };
 
     // 화면의 "등급 기준 보기"에 그대로 보여주는 기준표
@@ -250,13 +304,13 @@
             level: 'high',
             rules: [
                 '문화유적 분포 범위에 걸침 (10㎡ 이상) → 매장유산 유존지역',
-                '국가·시도 지정유산 구역에 걸침',
-                '지표조사로 유적이 확인된 범위에 걸침'
+                '국가·시도 지정유산 구역에 걸침 (자연유산 구역은 제외)'
             ]
         },
         {
             level: 'caution',
             rules: [
+                '지표조사로 유적이 확인된 범위에 걸침 (보고서 의견에 따라 조사 여부가 달라짐)',
                 '역사문화환경 보존지역이나 보호구역에 걸침',
                 `문화유적 분포 범위가 ${RISK.nearbyDistance}m 안에 있음`,
                 '필지에 예전 발굴·시굴조사 기록이 있음',
@@ -267,6 +321,10 @@
         {
             level: 'low',
             rules: ['위 기준에 하나도 해당하지 않음']
+        },
+        {
+            level: 'note',
+            rules: ['천연기념물·명승 같은 자연유산 구역은 매장유산 절차와 별개라 등급에 넣지 않고 따로 안내함']
         },
         {
             level: 'unknown',
@@ -291,12 +349,12 @@
         if (area.inDesignated) {
             high.push('국가·시도 지정유산 구역에 걸쳐요');
         }
+        // 주의
         const surfaceSite = onParcel.find((survey) => survey.kind === 'surfaceSite');
         if (surfaceSite) {
-            high.push(`지표조사로 유적이 확인된 범위에 걸쳐요 ('${surfaceSite.name}')`);
+            const followUps = surfaceSite.followUps || [];
+            caution.push(`지표조사로 유적이 확인된 범위에 걸쳐요 ('${surfaceSite.name}')${followUps.length > 0 ? `. 그 뒤 같은 범위에 ${surveyLabel(followUps[0])}${followUps.length > 1 ? ` 외 ${followUps.length - 1}건의` : ''} 기록이 있어요` : ''}`);
         }
-
-        // 주의
         if (area.inHistoricEnv) caution.push('역사문화환경 보존지역에 걸쳐요');
         if (area.inProtection) caution.push('국가유산 보호구역에 걸쳐요');
 
@@ -308,7 +366,8 @@
         const pastExcavations = onParcel.filter((survey) => survey.kind === 'excavation');
         if (pastExcavations.length > 0) {
             const years = pastExcavations.map((survey) => survey.year).filter(Boolean);
-            caution.push(`필지에 예전 발굴·시굴조사 기록이 ${pastExcavations.length}건 있어요${years.length ? ` (${Math.min(...years)}~${Math.max(...years)}년)` : ''}`);
+            const [first, last] = [Math.min(...years), Math.max(...years)];
+            caution.push(`필지에 예전 발굴·시굴조사 기록이 ${pastExcavations.length}건 있어요${years.length ? ` (${first === last ? first : `${first}~${last}`}년)` : ''}`);
         }
 
         const nearbyExcavations = result.surveyStats ? result.surveyStats.excavationsWithin200 : null;
@@ -329,6 +388,9 @@
         if (level === 'low') {
             reasons.push('주변 500m 안 자료를 확인했지만 위 기준에 해당하는 근거가 없어요');
         }
+        if (area.naturalNames.length > 0) {
+            reasons.push(`(참고) 자연유산 구역에 걸쳐요 ('${area.naturalNames.join("', '")}'). 등급에는 넣지 않았어요`);
+        }
         if (incomplete) {
             reasons.push('일부 자료(국가유산 구역, 문화유적 분포 범위, 조사 이력 중)를 불러오지 못했어요. 잠시 후 다시 확인해 보세요');
         }
@@ -344,4 +406,5 @@
 
     window.buildGuidance = buildGuidance;
     window.buildRisk = buildRisk;
+    window.isNaturalZone = isNaturalZone;
 })();

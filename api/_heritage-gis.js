@@ -81,6 +81,13 @@ function parseReport(report, kind, name) {
     return { method, year: yearMatch ? Number(yearMatch[1]) : null, report: text };
 }
 
+// 지표조사 구역의 유적 유무(EXIST_YN): Y 있음, N 없음, 그 밖(H 등)은 뜻이 확인되지 않아 null
+function parseSiteFound(value) {
+    if (value === 'Y') return true;
+    if (value === 'N') return false;
+    return null;
+}
+
 // 세 조사구역 레이어를 한 번에 받아 공통 형태로 반환 (레이어 하나가 실패하면 전체 실패로 봄)
 async function fetchSurveys(bbox, maxFeatures) {
     const results = await Promise.all(
@@ -90,6 +97,7 @@ async function fetchSurveys(bbox, maxFeatures) {
                 kind,
                 name: (feature.properties[nameKey] || '').trim(),
                 ...parseReport(feature.properties[reportKey], kind, feature.properties[nameKey]),
+                ...(kind === 'surface' ? { siteFound: parseSiteFound(feature.properties.EXIST_YN) } : {}),
                 geometry: feature.geometry
             }));
         })

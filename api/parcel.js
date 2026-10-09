@@ -301,11 +301,29 @@ module.exports = async function handler(req, res) {
             excavationsWithin500: countExcavations(NEARBY_RADIUS)
         };
 
+        // 필지에 걸친 지표조사 확인 유적마다, 같은 범위에서 그 뒤에 한 표본·시굴·발굴조사를 찾음
+        // (보고서의 조사 의견을 직접 읽을 수 없어서, 실제로 다음 단계 조사로 이어졌는지로 보여줌)
+        const excavations = surveysResult.value.filter((survey) => survey.kind === 'excavation');
+        const findFollowUps = (site) => {
+            const siteFeature = feature(site.geometry);
+            const seen = new Set();
+            return excavations
+                .filter((excavation) => !site.year || !excavation.year || excavation.year >= site.year)
+                .filter((excavation) => {
+                    const overlap = getOverlap(siteFeature, excavation.geometry);
+                    return overlap && area(overlap) >= EDGE_OVERLAP_AREA;
+                })
+                .filter((excavation) => !seen.has(excavation.name) && seen.add(excavation.name))
+                .sort((a, b) => (a.year || 0) - (b.year || 0))
+                .map(({ name, method, year, report }) => ({ name, method, year, report }));
+        };
+
         surveys = uniqueSurveys
             .sort((a, b) => a.distance - b.distance)
             .slice(0, SURVEY_LIMIT)
             .map(({ geometry, distance, ...survey }) => ({
                 ...survey,
+                ...(survey.kind === 'surfaceSite' && distance < 1 ? { followUps: findFollowUps({ ...survey, geometry }) } : {}),
                 distance: distance < 1 ? 0 : Math.round(distance)
             }));
     }
