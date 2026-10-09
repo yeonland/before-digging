@@ -43,7 +43,9 @@
         support: '매장유산 보호 및 조사에 관한 법률 제11조제3항 단서, 같은 법 시행령 제10조',
         contract: '매장유산 보호 및 조사에 관한 법률 제24조제4항',
         discovery: '매장유산 보호 및 조사에 관한 법률 제5조제2항, 제17조',
-        natural: '자연유산의 보존 및 활용에 관한 법률 (허가 조문 확인 중)'
+        natural: '자연유산의 보존 및 활용에 관한 법률 (허가 조문 확인 중)',
+        worldDistrict: '세계유산의 보존ㆍ관리 및 활용에 관한 특별법 제10조, 제11조의2제1항, 같은 법 시행령 제3조의2·제3조의4, 별표 1',
+        worldOutside: '세계유산의 보존ㆍ관리 및 활용에 관한 특별법 제11조의2제2항'
     };
 
     // 국가유산 구역 자료(VWorld)에는 문화유산·자연유산을 나누는 칸이 없어 이름으로 구분
@@ -153,6 +155,35 @@
                 details: common.length > 0 ? { summary: `공통 기준 ${common.length}개 보기`, items: common } : null,
                 law: `${LAW.simpleDiagnosis} (행위기준 고시와 약식영향진단 생략). 기준 원문은 국가유산청 국가유산공간정보서비스에서 확인하세요.`
             });
+        }
+
+        // 2-2. 세계유산: 고시된 세계유산지구 안이면 건축 전 세계유산영향평가, 등재 구역·완충구역이나 가까운 곳은 확인 안내
+        const world = result.worldHeritage;
+        if (world) {
+            const quote = (names) => `'${names.join("', '")}'`;
+            if (world.district.length > 0) {
+                steps.push({
+                    level: 'required',
+                    title: '세계유산영향평가를 받아야 해요',
+                    body: `이 필지는 세계유산 ${quote(world.district)}의 세계유산지구에 걸쳐 있어요. 세계유산지구에서 건축물을 짓거나 늘리는 공사는 건축 허가·신고 전에 세계유산영향평가를 해야 해요. 먼저 국가유산청에 사전검토요청서(위치, 규모, 최고 높이, 세계유산 구역과의 거리 등)를 내면 30일 안에 평가서 제출 대상인지 알려줘요.`,
+                    law: LAW.worldDistrict
+                });
+            } else if (world.core.length > 0 || world.buffer.length > 0) {
+                const inCore = world.core.length > 0;
+                steps.push({
+                    level: 'check',
+                    title: inCore ? '세계유산 구역에 걸쳐요' : '세계유산 완충구역에 걸쳐요',
+                    body: `이 필지는 세계유산 ${quote(inCore ? world.core : world.buffer)}의 ${inCore ? '세계유산 구역' : '완충구역'}에 걸쳐 있어요. 이 범위가 세계유산지구로 고시되면 건축 전에 세계유산영향평가를 받아야 해요. 지구로 고시됐는지, 영향평가가 필요한지 관할 시·군·구나 국가유산청에 확인해 보세요.`,
+                    law: LAW.worldDistrict
+                });
+            } else if (world.nearest) {
+                steps.push({
+                    level: 'info',
+                    title: '세계유산이 가까이에 있어요',
+                    body: `세계유산 '${world.nearest.name}' 구역에서 약 ${world.nearest.distance}m 떨어져 있어요. 세계유산지구 밖이라도 세계유산에 중대한 영향을 줄 것이 확실한 사업은 국가유산청이 세계유산영향평가를 요청할 수 있어요(예: 종묘 앞 세운4구역). 높은 건물이나 큰 개발이라면 미리 확인해 보세요.`,
+                    law: `${LAW.worldOutside} (거리 기준은 법에 정해져 있지 않아요. 500m는 서비스 참고 기준이에요)`
+                });
+            }
         }
 
         // 3. 지정구역·보호구역 (허가 조문은 아직 확인 전이라 문의 안내만)
@@ -330,7 +361,8 @@
             level: 'high',
             rules: [
                 '문화유적 분포 범위에 걸침 (10㎡ 이상) → 매장유산 유존지역',
-                '국가·시도 지정유산 구역에 걸침 (자연유산 구역은 제외)'
+                '국가·시도 지정유산 구역에 걸침 (자연유산 구역은 제외)',
+                '고시된 세계유산지구에 걸침 → 세계유산영향평가 대상'
             ]
         },
         {
@@ -338,6 +370,7 @@
             rules: [
                 '지표조사로 유적이 확인된 범위에 걸침 (보고서 의견에 따라 조사 여부가 달라짐)',
                 '역사문화환경 보존지역이나 보호구역에 걸침',
+                '세계유산 구역이나 완충구역에 걸침 (세계유산지구 고시 전)',
                 `문화유적 분포 범위가 ${RISK.nearbyDistance}m 안에 있음`,
                 '필지에 예전 발굴·시굴조사 기록이 있음',
                 `주변 ${RISK.excavationRadius}m 안에 발굴·시굴조사가 ${RISK.excavationCount}건 이상`,
@@ -375,7 +408,16 @@
         if (area.inDesignated) {
             high.push('국가·시도 지정유산 구역에 걸쳐요');
         }
+        const world = result.worldHeritage;
+        if (world && world.district.length > 0) {
+            high.push(`세계유산지구('${world.district.join("', '")}')에 걸쳐요`);
+        }
+
         // 주의
+        if (world && world.district.length === 0 && (world.core.length > 0 || world.buffer.length > 0)) {
+            const inCore = world.core.length > 0;
+            caution.push(`세계유산 ${inCore ? '구역' : '완충구역'}('${(inCore ? world.core : world.buffer).join("', '")}')에 걸쳐요`);
+        }
         const surfaceSite = onParcel.find((survey) => survey.kind === 'surfaceSite');
         if (surfaceSite) {
             const followUps = surfaceSite.followUps || [];

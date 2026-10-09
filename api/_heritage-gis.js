@@ -239,8 +239,46 @@ async function fetchAllowanceCriteria(code) {
     return { seid: seidMatch[1], zones, common };
 }
 
+// ---------------------------------------------------------------
+// 세계유산 (국가유산공간정보서비스 세계유산지구 메뉴)
+// - CHL_WORM_AS: 등재 때 정한 세계유산 구역(core)과 완충구역(buffer)
+// - CHL_WORS_AS: 세계유산법 제10조로 고시된 세계유산지구 (2026년 기준 종묘만 있음)
+// ---------------------------------------------------------------
+// 원본 자료의 오타 바로잡기
+const WORLD_NAMES = { 경사역사유적지구: '경주역사유적지구' };
+const worldName = (name) => WORLD_NAMES[name] || name;
+
+async function fetchWorldHeritage(bbox, maxFeatures) {
+    const [registered, districts] = await Promise.all([
+        fetchLayer('CHL_WORM_AS', bbox, maxFeatures),
+        fetchLayer('CHL_WORS_AS', bbox, maxFeatures)
+    ]);
+
+    return [
+        ...registered.map((feature) => ({
+            type: 'Feature',
+            geometry: feature.geometry,
+            properties: {
+                id: `m${feature.properties.GID}`,
+                name: worldName(feature.properties.WORM_NM),
+                kind: feature.properties.WORM_TP === 'buffer' ? 'buffer' : 'core'
+            }
+        })),
+        ...districts.map((feature) => ({
+            type: 'Feature',
+            geometry: feature.geometry,
+            properties: {
+                id: `s${feature.properties.GID}`,
+                name: worldName(feature.properties.WORM_NM),
+                kind: 'district'
+            }
+        }))
+    ];
+}
+
 module.exports = {
     fetchSites,
+    fetchWorldHeritage,
     fetchSurveys,
     fetchAllowanceZones,
     fetchDesignated,

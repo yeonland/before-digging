@@ -445,6 +445,17 @@
             }
         });
 
+        // 세계유산 구역·완충구역 (기본은 꺼둠, 색은 국가유산공간정보서비스와 비슷하게)
+        const WORLD_STYLES = {
+            core: { color: '#008f87', fillColor: '#2ad1c9', fillOpacity: 0.3, weight: 1.5 },
+            buffer: { color: '#ff7078', fillColor: '#ff7078', fillOpacity: 0.15, weight: 1.5, dashArray: '6 4' },
+            district: { color: '#5e17eb', fillOpacity: 0, weight: 2.5 }
+        };
+        const worldLayer = L.geoJSON(null, {
+            interactive: false,
+            style: feature => WORLD_STYLES[feature.properties.kind] || WORLD_STYLES.core
+        });
+
         // 줌 15 타일 칸 단위로 도형을 받아 레이어에 그림 (이미 받은 칸과 도형은 다시 그리지 않음)
         function createTileLoader(layer, query, label) {
             const loadedTiles = new Set();
@@ -488,6 +499,8 @@
 
         map.on('moveend overlayadd', loadSites);
         map.on('moveend overlayadd', loadAllowance);
+        const loadWorld = createTileLoader(worldLayer, '&layer=world', '세계유산');
+        map.on('moveend overlayadd', loadWorld);
         loadSites();
 
 
@@ -496,7 +509,8 @@
             "지적도 표시": cadastralLayer,
             "국가유산 구역 표시": heritageLayer,
             "문화유적 분포 범위 표시": sitesLayer,
-            "현상변경 허용기준 구역 표시": allowanceLayer
+            "현상변경 허용기준 구역 표시": allowanceLayer,
+            "세계유산 구역·완충구역 표시": worldLayer
         };
         L.control.layers(null, overlayMaps).addTo(map);
 
@@ -512,6 +526,8 @@
                     <div><span class="swatch" style="border: 2px solid #4caf50;"></span>역사문화환경 보존지역</div>
                     <div><span class="swatch" style="background: rgba(157, 78, 221, 0.25); border: 1.5px solid #7b2cbf;"></span>문화유적 분포 범위</div>
                     <div><span class="swatch" style="border: 1.5px dashed #d62828;"></span>현상변경 허용기준 구역 (켰을 때, 빨강 1구역 → 초록 바깥 구역)</div>
+                    <div><span class="swatch" style="background: rgba(42, 209, 201, 0.3); border: 1.5px solid #008f87;"></span>세계유산 구역 (켰을 때)</div>
+                    <div><span class="swatch" style="border: 1.5px dashed #ff7078;"></span>세계유산 완충구역 (켰을 때)</div>
                     <div><span class="swatch" style="border: 1.5px solid #e8a33d;"></span>지적도(필지 경계)</div>
                 </div>
             `;

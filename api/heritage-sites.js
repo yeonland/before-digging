@@ -1,7 +1,13 @@
 // 지도 타일(줌 15) 한 칸 범위의 국가유산청 도형을 GeoJSON으로 반환
 // - layer 없음: 문화유적분포지도
 // - layer=allowance: 현상변경 허용기준 구역
-const { fetchSites, fetchAllowanceZones } = require('./_heritage-gis');
+// - layer=world: 세계유산 구역·완충구역·세계유산지구
+const { fetchSites, fetchAllowanceZones, fetchWorldHeritage } = require('./_heritage-gis');
+
+const LAYERS = {
+    allowance: fetchAllowanceZones,
+    world: fetchWorldHeritage
+};
 
 const TILE_ZOOM = 15;
 
@@ -35,9 +41,8 @@ module.exports = async function handler(req, res) {
     }
 
     try {
-        const features = req.query.layer === 'allowance'
-            ? await fetchAllowanceZones(bbox, 1000)
-            : await fetchSites(bbox, 1000);
+        const fetchFeatures = LAYERS[req.query.layer] || fetchSites;
+        const features = await fetchFeatures(bbox, 1000);
 
         res.setHeader(
             'Cache-Control',

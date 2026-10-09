@@ -14,6 +14,7 @@ const {
     fetchAllowanceZones,
     fetchDesignated,
     fetchAllowanceCriteria,
+    fetchWorldHeritage,
     isPointInGeometry
 } = require('./_heritage-gis');
 const { findAgency } = require('./_agencies');
@@ -270,7 +271,7 @@ module.exports = async function handler(req, res) {
 
     const nearbyBbox = [minLng - lngPad, minLat - latPad, maxLng + lngPad, maxLat + latPad];
 
-    const [zonesResult, sitesResult, surveysResult, allowanceResult] = await Promise.allSettled([
+    const [zonesResult, sitesResult, surveysResult, allowanceResult, worldResult] = await Promise.allSettled([
         fetchVworldFeatures(
             'LT_C_UO301',
             `BOX(${minLng},${minLat},${maxLng},${maxLat})`,
@@ -279,7 +280,8 @@ module.exports = async function handler(req, res) {
         ),
         fetchSites(nearbyBbox, 1000),
         fetchSurveys(nearbyBbox, 1000),
-        fetchAllowanceZones([minLng, minLat, maxLng, maxLat], 100)
+        fetchAllowanceZones([minLng, minLat, maxLng, maxLat], 100),
+        fetchWorldHeritage(nearbyBbox, 100)
     ]);
 
     if (zonesResult.status === 'rejected') {
@@ -290,6 +292,9 @@ module.exports = async function handler(req, res) {
     }
     if (surveysResult.status === 'rejected') {
         console.error('국가유산조사구역 조회 오류:', surveysResult.reason);
+    }
+    if (worldResult.status === 'rejected') {
+        console.error('세계유산 조회 오류:', worldResult.reason);
     }
     if (allowanceResult.status === 'rejected') {
         console.error('현상변경 허용기준 조회 오류:', allowanceResult.reason);
@@ -426,6 +431,32 @@ module.exports = async function handler(req, res) {
         }));
     }
 
+    // 세계유산: 필지에 걸친 지구·구역·완충구역, 걸치지 않으면 500m 안의 가장 가까운 세계유산 구역
+    let worldHeritage = null;
+    if (worldResult.status === 'fulfilled') {
+        const features = worldResult.value;
+        const overlapping = measureOverlaps(
+            parcelFeature,
+            features.map((item) => ({ ...item.properties, geometry: item.geometry }))
+        ).filter((item) => area(item.overlap) >= EDGE_OVERLAP_AREA);
+        const namesOf = (kind) => [...new Set(overlapping.filter((item) => item.kind === kind).map((item) => item.name))];
+
+        const nearestCore = features
+            .filter((item) => item.properties.kind !== 'buffer')
+            .map((item) => ({ name: item.properties.name, distance: distanceToParcel(item.geometry) }))
+            .filter((item) => item.distance >= 1 && item.distance <= NEARBY_RADIUS)
+            .sort((a, b) => a.distance - b.distance)[0];
+
+        worldHeritage = {
+            district: namesOf('district'),
+            core: namesOf('core'),
+            buffer: namesOf('buffer'),
+            nearest: overlapping.length === 0 && nearestCore
+                ? { name: nearestCore.name, distance: Math.round(nearestCore.distance) }
+                : null
+        };
+    }
+
     // 응답에는 도형 대신 겹친 면적만 넣음
     const toResult = (items) => items && items.map(({ geometry, overlap, ...rest }) => ({
         ...rest,
@@ -464,6 +495,7 @@ module.exports = async function handler(req, res) {
         surveys,
         surveyStats,
         allowance,
+        worldHeritage,
         overlap: {
             area: roundArea(totalArea),
             ratio: roundArea((totalArea / parcelArea) * 100),
