@@ -53,6 +53,17 @@
     // 이름이 없는 구역은 구분할 수 없어 문화유산으로 봄 (안전한 쪽)
     const NATURAL_NAME = /철새|도래지|서식지|번식지|군락|자생지|나무|노거수|숲|수림|상록수|동굴|주상절리|화석|습지|폭포|계곡|천연보호구역/;
 
+    // 허용기준 구역 중 높이 같은 숫자 기준 없이 "개별검토", "개별심의", "심의구역", "보존구역"으로 된 곳
+    // → 공사마다 따로 검토를 받아야 해서 위험도 주의, 안내는 확인 필요
+    function needsAllowanceReview(item) {
+        return Boolean(item.rule) &&
+            [...item.rule.flat, ...item.rule.slope].some((text) => /개별\s*(검토|심의)|심의|보존구역/.test(text));
+    }
+
+    function allowanceLabel(item) {
+        return `${item.heritage ? `'${item.heritage}' ` : ''}${item.zone}`;
+    }
+
     function isNaturalZone(zone) {
         return NATURAL_NAME.test((zone && zone.name) || '');
     }
@@ -142,15 +153,21 @@
                     : `${item.zone}: 평지붕 ${item.rule.flat.join(', ')} / 경사지붕 ${item.rule.slope.join(', ')}`;
             };
             const lines = allowance.map((item) =>
-                `${item.heritage ? `'${item.heritage}' 주변 ` : ''}${ruleText(item)} (필지의 ${item.overlapRatio}%)`
+                `${item.heritage ? `'${item.heritage}' 주변 ` : ''}${ruleText(item)} (필지의 ${item.overlapRatio}%)${needsAllowanceReview(item) ? ' → 확인 필요' : ''}`
             );
-            const needsReview = allowance.some((item) => !item.rule ||
-                [...item.rule.flat, ...item.rule.slope].some((text) => /개별\s*검토|심의/.test(text)));
+            const reviewItems = allowance.filter(needsAllowanceReview);
+            const missing = allowance.some((item) => !item.rule);
             const common = [...new Set(allowance.flatMap((item) => item.common))];
+            const reviewText = reviewItems.length > 0
+                ? ` ⚠️ 확인 필요: ${reviewItems.map(allowanceLabel).join(', ')}은(는) 높이 같은 숫자 기준 대신 "개별검토·심의"로 정해져 있어요. 이런 구역은 건물 높이나 규모와 상관없이 공사마다 국가유산 쪽 검토(현상변경 허가 등)를 받아야 할 수 있어요. 설계를 확정하기 전에 관할 시·군·구 문화유산 담당 부서에 "이 공사가 현상변경 허가 대상인지, 어떤 서류가 필요한지" 먼저 문의하세요.`
+                : '';
+            const missingText = missing
+                ? ' 기준 내용을 불러오지 못한 구역은 국가유산청 국가유산공간정보서비스(gis-heritage.go.kr)에서 기준을 확인하세요.'
+                : '';
             steps.push({
-                level: needsReview ? 'check' : 'info',
-                title: '현상변경 허용기준 구역에 걸쳐요',
-                body: `국가유산 주변에서 지을 수 있는 건물의 높이 등을 미리 정해 둔 기준이에요. 역사문화환경 보존지역 안이라도 계획한 공사가 이 기준 안이면 약식영향진단을 생략할 수 있어요.${needsReview ? ' "개별검토"나 "심의"로 된 구역은 기준이 정해져 있지 않아 공사마다 따로 검토를 받아야 해요.' : ''}`,
+                level: reviewItems.length > 0 || missing ? 'check' : 'info',
+                title: reviewItems.length > 0 ? '현상변경 허용기준 구역에 걸쳐요 (확인 필요)' : '현상변경 허용기준 구역에 걸쳐요',
+                body: `국가유산 주변에서 지을 수 있는 건물의 높이 등을 미리 정해 둔 기준이에요. 역사문화환경 보존지역 안이라도 계획한 공사가 이 기준 안이면 약식영향진단을 생략할 수 있어요.${reviewText}${missingText}`,
                 items: lines,
                 details: common.length > 0 ? { summary: `공통 기준 ${common.length}개 보기`, items: common } : null,
                 law: `${LAW.simpleDiagnosis} (행위기준 고시와 약식영향진단 생략). 기준 원문은 국가유산청 국가유산공간정보서비스에서 확인하세요.`
@@ -371,6 +388,7 @@
                 '지표조사로 유적이 확인된 범위에 걸침 (보고서 의견에 따라 조사 여부가 달라짐)',
                 '역사문화환경 보존지역이나 보호구역에 걸침',
                 '세계유산 구역이나 완충구역에 걸침 (세계유산지구 고시 전)',
+                '현상변경 허용기준의 개별검토·심의 구역에 걸침 (숫자 기준 없이 공사마다 검토)',
                 `문화유적 분포 범위가 ${RISK.nearbyDistance}m 안에 있음`,
                 '필지에 예전 발굴·시굴조사 기록이 있음',
                 `주변 ${RISK.excavationRadius}m 안에 발굴·시굴조사가 ${RISK.excavationCount}건 이상`,
@@ -418,6 +436,11 @@
             const inCore = world.core.length > 0;
             caution.push(`세계유산 ${inCore ? '구역' : '완충구역'}('${(inCore ? world.core : world.buffer).join("', '")}')에 걸쳐요`);
         }
+        const reviewZones = (result.allowance || []).filter(needsAllowanceReview);
+        if (reviewZones.length > 0) {
+            caution.push(`현상변경 허용기준 개별검토·심의 구역에 걸쳐요 (${reviewZones.map(allowanceLabel).join(', ')}). 공사마다 따로 검토를 받아야 할 수 있어요`);
+        }
+
         const surfaceSite = onParcel.find((survey) => survey.kind === 'surfaceSite');
         if (surfaceSite) {
             const followUps = surfaceSite.followUps || [];
