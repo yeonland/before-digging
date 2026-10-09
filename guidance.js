@@ -94,6 +94,20 @@
         return `${survey.method}${survey.year ? `(${survey.year}년)` : ''}`;
     }
 
+    // 도면으로 올린 사업부지 진단(result.target === 'site')에서는 "필지"를 "사업부지"로 바꿔 씀
+    const SITE_WORDS = [
+        [/이 필지/g, '이 사업부지'],
+        [/필지에서/g, '부지 경계에서'],
+        [/필지 경계/g, '부지 경계'],
+        [/필지(에|의|가|는)/g, '부지$1']
+    ];
+
+    function siteWording(text) {
+        return typeof text === 'string'
+            ? SITE_WORDS.reduce((result, [pattern, replacement]) => result.replace(pattern, replacement), text)
+            : text;
+    }
+
     // input: { workType, landArea, floorArea } (workType: '', house, farm, business, factory, other)
     function buildGuidance(result, input) {
         const area = classify(result);
@@ -316,6 +330,14 @@
             law: LAW.discovery
         });
 
+        if (result.target === 'site') {
+            steps.forEach((step) => {
+                step.title = siteWording(step.title);
+                step.body = siteWording(step.body);
+                if (step.items) step.items = step.items.map(siteWording);
+            });
+        }
+
         return { steps, cost, notes, incomplete: area.incomplete };
     }
 
@@ -489,7 +511,7 @@
         return {
             level,
             ...RISK_LEVELS[level],
-            reasons,
+            reasons: result.target === 'site' ? reasons.map(siteWording) : reasons,
             incomplete,
             criteria: RISK_CRITERIA.map((group) => ({ ...group, ...RISK_LEVELS[group.level] }))
         };

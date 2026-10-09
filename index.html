@@ -41,6 +41,70 @@
             cursor: pointer;
         }
 
+        /* 도면(DXF) 올리기 버튼과 파일 칸 */
+        #dxf-btn {
+            padding: 8px 10px;
+            font-size: 14px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        #dxf-input {
+            display: none;
+        }
+
+        /* 도면 사업부지: 설정 단계 선택 목록과 필지별 표 */
+        .site-options {
+            list-style: none;
+            margin: 4px 0 8px 0;
+            padding: 0;
+        }
+        .site-options li {
+            margin-bottom: 4px;
+        }
+        .site-options label {
+            cursor: pointer;
+        }
+        .site-options .site-option-note {
+            color: #666;
+            font-size: 12px;
+        }
+        .site-run {
+            margin: 8px 0;
+            padding: 8px 14px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .site-table-wrap {
+            overflow-x: auto;
+            margin: 6px 0 10px 0;
+        }
+        .site-table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 12px;
+        }
+        .site-table th,
+        .site-table td {
+            border: 1px solid #ddd;
+            padding: 4px 6px;
+            text-align: left;
+            vertical-align: top;
+        }
+        .site-table th {
+            background: #f4f6f8;
+            white-space: nowrap;
+        }
+        .site-table td.num {
+            text-align: right;
+            white-space: nowrap;
+        }
+        .site-table tbody tr {
+            cursor: pointer;
+        }
+        .site-table tbody tr:hover {
+            background: #eef3f8;
+        }
+
         /* 팝업의 "해야 할 일 보기" 버튼 */
         .go-panel {
             margin-top: 8px;
@@ -352,6 +416,8 @@
                 placeholder="지번, 도로명 또는 장소 (예: 경주시 인왕동 815-1)"
             >
             <button id="search-btn">검색</button>
+            <button id="dxf-btn" type="button" title="DXF 도면으로 사업부지 전체 진단">도면(DXF)</button>
+            <input id="dxf-input" type="file" accept=".dxf">
         </div>
         <!-- 검색 결과가 여러 개일 때 고르는 목록 -->
         <ul id="search-results" hidden></ul>
@@ -793,6 +859,301 @@
             diagnose(e.latlng);
         });
 
+        // ---------------------------------------------------------------
+        // 도면(DXF)으로 사업부지 진단: 파일 고르기 → 경계 레이어·좌표계 고르기 → 부지 전체 + 필지별 진단
+        // 도면 파일은 브라우저 안에서만 읽고, 서버에는 바꾼 경계 좌표만 보냄
+        // ---------------------------------------------------------------
+        const DXF_LIBS = [
+            'https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js',
+            'dxf-site.js'
+        ];
+        let dxfLibsLoading = null;
+        const siteLayer = L.layerGroup().addTo(map);
+        let siteDraft = null;
+        let lastSiteResponse = null;
+
+        // 도면 기능은 쓸 때만 라이브러리를 불러옴 (순서대로)
+        function loadDxfLibs() {
+            if (!dxfLibsLoading) {
+                dxfLibsLoading = DXF_LIBS.reduce((previous, src) => previous.then(() => new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = src;
+                    script.onload = resolve;
+                    script.onerror = () => reject(new Error(`${src} 불러오기 실패`));
+                    document.head.appendChild(script);
+                })), Promise.resolve());
+                dxfLibsLoading.catch(() => { dxfLibsLoading = null; });
+            }
+            return dxfLibsLoading;
+        }
+
+        function showSiteMessage(message) {
+            resultPanel.innerHTML = `<h3>도면으로 사업부지 진단</h3><p>${message}</p>`;
+            resultPanel.hidden = false;
+            scrollToPanel();
+        }
+
+        document.getElementById('dxf-btn').addEventListener('click', () => {
+            document.getElementById('dxf-input').click();
+        });
+        document.getElementById('dxf-input').addEventListener('change', event => {
+            const file = event.target.files[0];
+            event.target.value = ''; // 같은 파일을 다시 골라도 동작하도록
+            if (file) handleDxfFile(file);
+        });
+
+        async function handleDxfFile(file) {
+            showSiteMessage('도면을 읽는 중이에요...');
+            try {
+                await loadDxfLibs();
+                const text = window.dxfSite.decodeDxf(await file.arrayBuffer());
+                const { layers } = window.dxfSite.readBoundaries(text);
+                if (layers.length === 0) {
+                    showSiteMessage('도면에서 닫힌 경계선(닫힌 폴리라인)을 찾지 못했어요. 사업부지 경계를 닫힌 폴리라인으로 그린 DXF인지 확인해 주세요.');
+                    return;
+                }
+                siteDraft = { fileName: file.name, layers, layerIndex: 0, crs: null };
+                await renderSiteSetup();
+            } catch (error) {
+                console.error('도면 읽기 오류:', error);
+                showSiteMessage('도면을 읽지 못했어요. DXF 형식(ASCII)으로 저장한 파일인지 확인해 주세요.');
+            }
+        }
+
+        // 1. 경계 레이어, 2. 좌표계 고르기. 좌표계 후보마다 그렇게 읽으면 어느 주소가 되는지 보여줌
+        async function renderSiteSetup() {
+            const draft = siteDraft;
+            const layer = draft.layers[draft.layerIndex];
+            showSiteMessage('좌표계 후보 위치를 확인하는 중이에요...');
+
+            const candidates = window.dxfSite.crsCandidates(layer);
+            let addresses = [];
+            if (candidates.length > 0) {
+                const points = candidates.map(item => item.center.join(',')).join('|');
+                const response = await fetch(`/api/site?points=${encodeURIComponent(points)}`);
+                addresses = response.ok ? (await response.json()).addresses : [];
+            }
+            if (draft !== siteDraft) return; // 그사이 다른 파일을 골랐으면 무시
+
+            // 지적도에 없는 곳(바다·국외)으로 떨어지는 후보는 뺌
+            draft.candidates = candidates
+                .map((item, index) => ({ ...item, address: addresses[index] || null }))
+                .filter(item => item.address);
+            if (!draft.candidates.some(item => item.code === draft.crs)) draft.crs = null;
+            if (draft.candidates.length === 1) draft.crs = draft.candidates[0].code;
+
+            const layerItems = draft.layers.map((item, index) => `
+                <li><label>
+                    <input type="radio" name="site-layer" value="${index}" ${index === draft.layerIndex ? 'checked' : ''}>
+                    <b>${escapeHtml(item.name)}</b> · 경계 ${item.polygons.length}개 · 약 ${formatArea(Math.round(item.area))}
+                    ${item.scale !== 1 ? '<span class="site-option-note">(mm 단위 도면으로 보고 m로 바꿨어요)</span>' : ''}
+                </label></li>`).join('');
+
+            const crsItems = draft.candidates.map(item => `
+                <li><label>
+                    <input type="radio" name="site-crs" value="${item.code}" ${item.code === draft.crs ? 'checked' : ''}>
+                    <b>${escapeHtml(item.name)}</b> (EPSG:${item.code}) → <b>${escapeHtml(item.address)}</b> 부근
+                    <span class="site-option-note">${escapeHtml(item.note)}</span>
+                </label></li>`).join('');
+
+            resultPanel.innerHTML = `
+                <h3>도면으로 사업부지 진단</h3>
+                <p class="panel-sub">${escapeHtml(draft.fileName)} · 도면은 이 브라우저에서만 읽고, 진단에는 경계 좌표만 보내요.</p>
+                <h4>1. 사업부지 경계 레이어</h4>
+                <p class="panel-sub">닫힌 선이 있는 레이어예요. 넓은 순으로 보여주고, 다른 경계 안에 있는 경계는 제외 구역으로 봐요.</p>
+                <ul class="site-options">${layerItems}</ul>
+                <h4>2. 도면 좌표계</h4>
+                ${draft.candidates.length > 0 ? `
+                    <p class="panel-sub">DXF에는 좌표계 정보가 없어요. 좌표계마다 위치가 달라지니, <b>사업지 주소와 맞는 것</b>을 골라 주세요. 고르면 지도에 경계가 그려져요.</p>
+                    <ul class="site-options">${crsItems}</ul>
+                    <button type="button" class="site-run" id="site-run" ${draft.crs ? '' : 'disabled'}>이 경계로 진단하기</button>
+                ` : `
+                    <p>도면 좌표를 어떤 좌표계로 읽어도 우리나라 땅 위에 오지 않아요. 측량 좌표(TM 좌표)가 아니라 임의의 좌표(0,0 기준 등)로 그린 도면일 수 있어요. 측량 성과나 지적 좌표로 맞춘 도면으로 다시 올려 주세요.</p>
+                `}
+            `;
+            resultPanel.hidden = false;
+
+            resultPanel.querySelectorAll('input[name="site-layer"]').forEach(input => {
+                input.addEventListener('change', () => {
+                    siteDraft.layerIndex = Number(input.value);
+                    renderSiteSetup();
+                });
+            });
+            resultPanel.querySelectorAll('input[name="site-crs"]').forEach(input => {
+                input.addEventListener('change', () => {
+                    siteDraft.crs = Number(input.value);
+                    document.getElementById('site-run').disabled = false;
+                    previewSite();
+                });
+            });
+            const runButton = document.getElementById('site-run');
+            if (runButton) runButton.addEventListener('click', runSite);
+            if (draft.crs) previewSite();
+        }
+
+        const SITE_BOUNDARY_STYLE = { color: '#1d4ed8', weight: 3, dashArray: '8 4', fillColor: '#1d4ed8', fillOpacity: 0.06 };
+
+        function previewSite() {
+            const layer = siteDraft.layers[siteDraft.layerIndex];
+            siteDraft.geometry = window.dxfSite.toGeometry(layer, siteDraft.crs);
+            siteLayer.clearLayers();
+            const boundary = L.geoJSON(siteDraft.geometry, { interactive: false, style: SITE_BOUNDARY_STYLE }).addTo(siteLayer);
+            map.fitBounds(boundary.getBounds(), { padding: [20, 20] });
+        }
+
+        async function runSite() {
+            const geometry = siteDraft.geometry;
+            showSiteMessage('사업부지와 걸친 필지를 진단하는 중이에요... 필지가 많으면 1분 가까이 걸릴 수 있어요.');
+            try {
+                const response = await fetch('/api/site', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ geometry })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    showSiteMessage(escapeHtml(data.message || '사업부지를 진단하지 못했어요. 잠시 후 다시 시도해 주세요.'));
+                    return;
+                }
+                if (data.parcels.length === 0) {
+                    showSiteMessage('경계 안에서 필지를 찾지 못했어요. 좌표계를 다시 확인해 주세요.');
+                    return;
+                }
+                data.parcels.forEach(item => { item.risk = window.buildRisk(item); });
+                lastSiteResponse = data;
+                showSitePanel();
+            } catch (error) {
+                console.error('사업부지 진단 오류:', error);
+                showSiteMessage('사업부지를 진단하지 못했어요. 잠시 후 다시 시도해 주세요.');
+            }
+        }
+
+        const RISK_ORDER = { high: 0, caution: 1, unknown: 2, low: 3 };
+        const RISK_COLORS = { high: '#d62828', caution: '#e9a400', unknown: '#999999', low: '#2a9d8f' };
+
+        // 지도에 부지 경계와 필지(위험도 색)를 그림. 필지를 누르면 그 필지 진단을 보여줌
+        function drawSiteParcels() {
+            const data = lastSiteResponse;
+            siteLayer.clearLayers();
+            data.parcels.forEach((item, index) => {
+                const color = RISK_COLORS[item.risk.level];
+                L.geoJSON(item.parcel.geometry, {
+                    style: { color, weight: 1, fillColor: color, fillOpacity: 0.25 }
+                })
+                    .bindTooltip(`${escapeHtml(item.parcel.address)} · 위험도 ${item.risk.icon} ${escapeHtml(item.risk.label)}`)
+                    .on('click', event => {
+                        L.DomEvent.stopPropagation(event);
+                        showSiteParcel(index);
+                    })
+                    .addTo(siteLayer);
+            });
+            const boundary = L.geoJSON(data.site.geometry, { interactive: false, style: SITE_BOUNDARY_STYLE }).addTo(siteLayer);
+            map.fitBounds(boundary.getBounds(), { padding: [20, 20] });
+        }
+
+        // 주소에서 시·도와 시·군·구를 뺀 나머지 (예: "인왕동 811-1")
+        function shortAddress(address) {
+            const words = (address || '').split(' ');
+            return words.slice(/세종/.test(words[0]) ? 1 : 2).join(' ') || address;
+        }
+
+        function siteParcelOrder(data) {
+            return data.parcels
+                .map((item, index) => ({ item, index }))
+                .sort((a, b) => (RISK_ORDER[a.item.risk.level] - RISK_ORDER[b.item.risk.level]) ||
+                    (b.item.parcel.inSiteArea - a.item.parcel.inSiteArea));
+        }
+
+        // 부지 전체 진단: 위험도·해야 할 일은 부지 경계 기준, 아래에 필지별 표
+        function showSitePanel() {
+            const data = lastSiteResponse;
+            const first = data.parcels[0].parcel.address.split(' ');
+            const place = first.slice(0, /세종/.test(first[0]) ? 2 : 3).join(' ');
+            const siteData = {
+                ...data.result,
+                target: 'site',
+                parcel: {
+                    address: `${place} 일원 (도면 사업부지, ${data.site.parcelCount}필지)`,
+                    jibun: '',
+                    area: data.site.area,
+                    geometry: data.site.geometry
+                }
+            };
+
+            const counts = {};
+            data.parcels.forEach(item => { counts[item.risk.level] = (counts[item.risk.level] || 0) + 1; });
+            const countText = ['high', 'caution', 'unknown', 'low']
+                .filter(level => counts[level])
+                .map(level => {
+                    const sample = data.parcels.find(item => item.risk.level === level).risk;
+                    return `${sample.icon} ${escapeHtml(sample.label)} ${counts[level]}`;
+                })
+                .join(' · ');
+
+            const rows = siteParcelOrder(data).map(({ item, index }) => `
+                <tr onclick="showSiteParcel(${index})">
+                    <td style="white-space: nowrap;">${item.risk.icon} ${escapeHtml(item.risk.label)}</td>
+                    <td>${escapeHtml(shortAddress(item.parcel.address))}</td>
+                    <td class="num">${formatArea(item.parcel.area)}</td>
+                    <td class="num">${formatArea(item.parcel.inSiteArea)}</td>
+                    <td>${escapeHtml(item.risk.reasons[0] || '')}</td>
+                </tr>`).join('');
+
+            const table = `
+                <details open>
+                    <summary><b>필지별 진단 (${data.site.parcelCount}필지)</b> · ${countText}</summary>
+                    <p class="panel-sub">위험도가 높은 순으로 보여줘요. 줄을 누르거나 지도에서 필지를 누르면 그 필지의 진단을 볼 수 있어요.</p>
+                    <div class="site-table-wrap">
+                        <table class="site-table">
+                            <thead><tr><th>위험도</th><th>지번</th><th>필지 면적</th><th>부지 안 면적</th><th>주요 이유</th></tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>
+                    <button type="button" class="go-panel" onclick="downloadSiteCsv()">표 내려받기 (CSV)</button>
+                    ${data.site.parcelsTruncated ? '<p class="disclaimer">※ 필지가 너무 많아 일부만 진단했어요.</p>' : ''}
+                </details>`;
+
+            showGuidancePanel(siteData, {
+                title: '도면 사업부지 진단 결과 · 해야 할 일',
+                areaLabel: '부지 면적',
+                extra: table
+            });
+            if (parcelHighlight) map.removeLayer(parcelHighlight);
+            parcelHighlight = null;
+            drawSiteParcels();
+            scrollToPanel();
+        }
+
+        function showSiteParcel(index) {
+            const item = lastSiteResponse.parcels[index];
+            highlightParcel(item.parcel.geometry);
+            showGuidancePanel(item, { back: true });
+            scrollToPanel();
+        }
+
+        // 필지별 표를 CSV로 내려받기 (엑셀에서 한글이 깨지지 않도록 BOM을 붙임)
+        function downloadSiteCsv() {
+            const data = lastSiteResponse;
+            const quote = value => `"${String(value).replace(/"/g, '""')}"`;
+            const lines = [
+                ['위험도', '주소', '필지 면적(㎡)', '부지 안 면적(㎡)', '이유'].map(quote).join(','),
+                ...siteParcelOrder(data).map(({ item }) => [
+                    item.risk.label,
+                    item.parcel.address,
+                    item.parcel.area,
+                    item.parcel.inSiteArea,
+                    item.risk.reasons.join(' / ')
+                ].map(quote).join(','))
+            ];
+            const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `사업부지_필지별_진단_${new Date().toISOString().slice(0, 10)}.csv`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+
         // 한 지점의 필지를 진단 (지도 클릭, 주소 검색에서 사용)
         function diagnose(clickedLatlng) {
             // 응답이 늦게 와도 이 클릭의 핀에만 결과를 넣도록 지역 변수로 보관
@@ -950,16 +1311,19 @@
             return Number.isFinite(value) && value >= 0 ? value : null;
         }
 
-        function showGuidancePanel(data) {
+        // options: title(제목), areaLabel(면적 이름), extra(위험도 아래에 넣을 내용), back(도면 사업부지로 돌아가는 버튼)
+        function showGuidancePanel(data, options = {}) {
             lastParcelResult = data;
             const workOptions = WORK_TYPES
                 .map(([value, label]) => `<option value="${value}">${label}</option>`)
                 .join('');
 
             resultPanel.innerHTML = `
-                <h3>진단 결과 · 해야 할 일</h3>
-                <p class="panel-sub">${escapeHtml(data.parcel.address)} · 필지 면적 ${formatArea(data.parcel.area)}</p>
+                ${options.back ? '<button type="button" class="go-panel" onclick="showSitePanel()">← 도면 사업부지 전체로</button>' : ''}
+                <h3>${escapeHtml(options.title || '진단 결과 · 해야 할 일')}</h3>
+                <p class="panel-sub">${escapeHtml(data.parcel.address)} · ${escapeHtml(options.areaLabel || '필지 면적')} ${formatArea(data.parcel.area)}</p>
                 ${renderRisk(window.buildRisk(data))}
+                ${options.extra || ''}
                 <div class="inputs">
                     <label>공사 종류 <select id="work-type">${workOptions}</select></label>
                     <label>사업(대지) 면적 <input id="land-area" type="number" min="0" step="1" value="${Math.round(data.parcel.area)}"> ㎡</label>
