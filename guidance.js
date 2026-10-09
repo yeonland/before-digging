@@ -180,7 +180,7 @@
             const followUps = site.followUps || [];
             const shown = followUps.slice(0, 3).map(surveyLabel).join(', ');
             const followUpText = followUps.length > 0
-                ? ` 같은 범위에서 그 뒤에 ${shown}${followUps.length > 3 ? ` 외 ${followUps.length - 3}건의` : ''} 기록이 있어요. 그 조사 결과도 함께 확인해 보세요.`
+                ? ` 같은 범위에서 그 뒤에 ${shown}${followUps.length > 3 ? ` 외 ${followUps.length - 3}건의` : ''} 기록이 있어요. 그 조사 결과도 함께 확인해 보세요. 아래 "주변 조사 이력"의 "보고서 찾기"로 국가유산청 보고서 목록을 열 수 있어요.`
                 : ' 같은 범위에서 그 뒤에 한 표본·시굴·발굴조사 기록은 찾지 못했어요.';
             steps.push({
                 level: 'check',

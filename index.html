@@ -323,6 +323,11 @@
             color: #666;
             font-size: 12px;
         }
+        .survey-link {
+            font-size: 12px;
+            color: #1d72b8;
+            white-space: nowrap;
+        }
         #result-panel .disclaimer {
             margin: 14px 0 0 0;
             font-size: 12px;
@@ -679,6 +684,31 @@
         });
 
         // 팝업에 넣는 VWorld 텍스트의 HTML 특수문자 처리
+        // 국가유산청 발굴조사 보고서·현황 목록 (e-minwon, 국가유산청 홈페이지에 들어가 있는 목록)
+        // 주소에 검색어를 넣으면 걸러진 목록이 열림. 보고서는 띄어쓴 단어가 모두 들어간 것을 찾아줌
+        const REPORT_SEARCH_URL = 'https://www.e-minwon.go.kr/ge/ee/getListEcexmRptp.do?txtRptNm=';
+        const STATUS_SEARCH_URL = 'https://www.e-minwon.go.kr/ge/ee/getListEcexmPrmsnAply.do?searchVal=';
+
+        // 조사명에서 "괘릉리 산37-1"처럼 동·리 이름과 번지를 뽑아 보고서 검색어로 씀
+        function reportSearchWord(name) {
+            const match = (name || '').match(/([가-힣0-9]+(?:동|리|가))\s*\(?\s*(산\s?\d+(?:-\d+)?|\d+(?:-\d+)?)?/);
+            if (!match) return null;
+            return match[2] ? `${match[1]} ${match[2].replace(/\s/g, '')}` : match[1];
+        }
+
+        function reportSearchLink(name) {
+            const word = reportSearchWord(name);
+            return word
+                ? `<a class="survey-link" href="${REPORT_SEARCH_URL}${encodeURIComponent(word)}" target="_blank" rel="noopener">보고서 찾기 ↗</a>`
+                : '';
+        }
+
+        // 필지 주소에서 동·리 이름 (발굴조사 현황은 주소 한 칸에서 그대로 찾아서 동·리 이름만 넣음)
+        function addressDong(address) {
+            const words = (address || '').split(' ').filter(word => /(동|리|가)$/.test(word) && !/(시|군|구|읍|면)$/.test(word));
+            return words[words.length - 1] || null;
+        }
+
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
@@ -946,8 +976,14 @@
                     <span class="survey-method">${escapeHtml(survey.method)}</span>
                     ${escapeHtml(survey.name || '이름 없음')} ·
                     ${survey.distance === 0 ? '<b>필지에 걸침</b>' : `약 ${survey.distance}m`}${survey.year ? ` · ${survey.year}년` : ''}
+                    ${survey.kind === 'excavation' ? reportSearchLink(survey.name) : ''}
                     ${survey.report ? `<div class="survey-report">${escapeHtml(survey.report)}</div>` : ''}
+                    ${(survey.followUps || []).length > 0 ? `<div class="survey-report">그 뒤 같은 범위: ${survey.followUps.map(item => `${escapeHtml(item.method)}${item.year ? `(${item.year}년)` : ''} ${reportSearchLink(item.name)}`).join(', ')}</div>` : ''}
                 </li>`;
+            const dong = addressDong(lastParcelResult.parcel && lastParcelResult.parcel.address);
+            const statusLink = dong
+                ? `<p class="panel-sub" style="margin-top: 4px;"><a class="survey-link" href="${STATUS_SEARCH_URL}${encodeURIComponent(dong)}" target="_blank" rel="noopener">${escapeHtml(dong)} 발굴조사 허가 현황 보기 ↗</a> <span style="color: #666; font-size: 12px;">(국가유산청, 최근 신청된 조사까지)</span></p>`
+                : '';
             const surveySection = surveys === null || surveys === undefined
                 ? ''
                 : `
@@ -955,7 +991,8 @@
                 ${surveys.length > 0
                     ? `<ul class="notes surveys">${surveys.map(surveyItem).join('')}</ul>`
                     : '<p class="panel-sub">500m 안에 등록된 조사 기록이 없어요.</p>'}
-                <p class="disclaimer" style="margin-top: 4px;">국가유산청 국가유산조사구역 자료예요. 가까운 순으로 최대 10건을 보여주고, 조사 종류와 연도는 보고서 이름에서 읽어낸 거라 실제와 다를 수 있어요.</p>`;
+                ${statusLink}
+                <p class="disclaimer" style="margin-top: 4px;">국가유산청 국가유산조사구역 자료예요. 가까운 순으로 최대 10건을 보여주고, 조사 종류와 연도는 보고서 이름에서 읽어낸 거라 실제와 다를 수 있어요. "보고서 찾기"는 국가유산청 발굴조사 보고서 목록을 조사 위치로 검색해요. 2017년쯤부터 제출된 발굴·시굴조사 보고서만 있고 지표조사 보고서는 없어서, 예전 조사는 안 나올 수 있어요.</p>`;
 
             const notes = guidance.notes.map(note => `
                 <li>${escapeHtml(note.text)} ${lawDetails(note.law)}</li>`).join('');
