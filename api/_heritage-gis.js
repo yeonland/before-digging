@@ -11,17 +11,23 @@ const SURVEY_LAYERS = [
 ];
 
 // bbox: [서쪽 경도, 남쪽 위도, 동쪽 경도, 북쪽 위도]
-async function fetchLayer(layer, bbox, maxFeatures) {
+// where: { 속성 이름: 값 } (주면 bbox 대신 속성이 같은 것만 받음)
+async function fetchLayer(layer, bbox, maxFeatures, where) {
     const params = new URLSearchParams({
         service: 'WFS',
         version: '1.1.0',
         request: 'GetFeature',
         typeName: layer,
         srsName: 'EPSG:4326',
-        bbox: bbox.join(','),
         outputFormat: 'application/json',
         maxFeatures: String(maxFeatures)
     });
+    if (where) {
+        const [[name, value]] = Object.entries(where);
+        params.set('filter', `<Filter xmlns="http://www.opengis.net/ogc"><PropertyIsEqualTo><PropertyName>${name}</PropertyName><Literal>${value}</Literal></PropertyIsEqualTo></Filter>`);
+    } else {
+        params.set('bbox', bbox.join(','));
+    }
 
     const response = await fetch(`${SERVICE_URL}?${params.toString()}`);
 
@@ -142,4 +148,102 @@ function isPointInGeometry(lng, lat, geometry) {
     );
 }
 
-module.exports = { fetchSites, fetchSurveys, isPointInGeometry };
+// ---------------------------------------------------------------
+// 현상변경 허용기준 (안내 페이지 코드 TB_HRNR_MID)
+// 구역 도형(CHL_PMPG_AS)에는 구역 이름(1구역, 2-1구역 등)과 허용기준 묶음 번호(PMPG_SEID)만 있고
+// 어느 국가유산의 기준인지, 기준 내용은 없음. 기준 내용은 국가유산 코드로 여는 팝업 페이지에만 있어서
+// 주변 지정유산을 찾아 팝업을 열어 보고, 묶음 번호가 같은 것을 고름
+// ---------------------------------------------------------------
+const ALLOWANCE_LAYER = 'CHL_PMPG_AS';
+const DESIGNATED_LAYERS = ['CHL_SPCN_AS', 'CHL_SPCL_AS', 'CHL_REGS_AS', 'CHL_REGL_AS']; // 국가지정, 시도지정, 국가등록, 시도등록
+const CRITERIA_URL = 'https://gis-heritage.go.kr/user/gischa/NewGisChaSecGAcceptanceCriteria.do';
+
+// bbox 안의 허용기준 구역, 또는 seid를 주면 그 묶음의 구역 전체
+async function fetchAllowanceZones(bbox, maxFeatures, seid) {
+    const features = await fetchLayer(ALLOWANCE_LAYER, bbox, maxFeatures, seid ? { PMPG_SEID: seid } : null);
+
+    return features.map((feature) => ({
+        type: 'Feature',
+        geometry: feature.geometry,
+        properties: {
+            id: feature.properties.GID,
+            seid: feature.properties.PMPG_SEID,
+            zoneCode: feature.properties.ZON_CD,
+            zone: feature.properties.ZON_NM
+        }
+    }));
+}
+
+async function fetchDesignated(bbox, maxFeatures) {
+    const results = await Promise.all(
+        DESIGNATED_LAYERS.map((layer) => fetchLayer(layer, bbox, maxFeatures))
+    );
+
+    return results.flat().map((feature) => ({
+        code: feature.properties.CP_CD,
+        name: feature.properties.CPH_FULL_NM || feature.properties.CPH_NM,
+        geometry: feature.geometry
+    }));
+}
+
+// 팝업 HTML의 칸 내용을 글자로 (ㅇ 표시와 줄바꿈 정리)
+function cellText(html) {
+    return html
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<[^>]*>/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .split('\n')
+        .map((line) => line.replace(/^\s*[ㅇ∘○·]\s*/, '').trim())
+        .filter(Boolean);
+}
+
+// 국가유산 코드로 허용기준 팝업을 열어 구역별 기준과 공통 기준을 읽음 (기준이 없으면 null)
+async function fetchAllowanceCriteria(code) {
+    const response = await fetch(CRITERIA_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ cpCd: code }).toString()
+    });
+
+    if (!response.ok) {
+        throw new Error(`허용기준 응답 오류: ${response.status}`);
+    }
+
+    const html = await response.text();
+    const seidMatch = html.match(/id="hidden_pmpgSeid"\s+value="([^"]+)"/);
+    const tbody = (html.match(/<tbody>([\s\S]*?)<\/tbody>/) || [])[1];
+    if (!seidMatch || !tbody) return null;
+
+    const zones = [];
+    let common = [];
+    for (const [, row] of tbody.matchAll(/<tr>([\s\S]*?)<\/tr>/g)) {
+        const cells = [...row.matchAll(/<td([^>]*)>([\s\S]*?)<\/td>/g)];
+        if (cells.length === 0) continue;
+        const label = cellText(cells[0][2]).join(' ');
+
+        if (label === '공통') {
+            common = cellText(cells[2] ? cells[2][2] : '');
+            continue;
+        }
+
+        // 칸: 구역, 범례, (평슬라브, 경사지붕 | 두 칸 합친 기준), 이동 버튼(구역 도형 번호)
+        const ruleCells = cells.slice(2).filter(([, , inner]) => !/markerbox/.test(inner));
+        const ids = [...row.matchAll(/mapMove\('CHL_PMPG_AS','gid','(\d+)'\)/g)].map((match) => Number(match[1]));
+        const flat = cellText(ruleCells[0] ? ruleCells[0][2] : '');
+        const merged = ruleCells[0] && /colspan="2"/.test(ruleCells[0][1]);
+        const slope = merged ? flat : cellText(ruleCells[1] ? ruleCells[1][2] : '');
+
+        zones.push({ zone: label, ids, flat, slope });
+    }
+
+    return { seid: seidMatch[1], zones, common };
+}
+
+module.exports = {
+    fetchSites,
+    fetchSurveys,
+    fetchAllowanceZones,
+    fetchDesignated,
+    fetchAllowanceCriteria,
+    isPointInGeometry
+};

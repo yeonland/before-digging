@@ -3,11 +3,19 @@
 // - zones: VWorld 국가유산 지정/보호구역(lt_c_uo301)
 // - sites: 국가유산청 문화유적분포지도
 // - surveys: 국가유산청 국가유산조사구역 (주변 발굴·시굴·지표조사 이력)
+// - allowance: 국가유산청 현상변경 허용기준 (필지에 걸친 구역과 그 구역의 기준)
 const { area } = require('@turf/area');
 const { feature, featureCollection } = require('@turf/helpers');
 const { intersect } = require('@turf/intersect');
 const { union } = require('@turf/union');
-const { fetchSites, fetchSurveys, isPointInGeometry } = require('./_heritage-gis');
+const {
+    fetchSites,
+    fetchSurveys,
+    fetchAllowanceZones,
+    fetchDesignated,
+    fetchAllowanceCriteria,
+    isPointInGeometry
+} = require('./_heritage-gis');
 
 // 이보다 작은 겹침은 무시 (㎡)
 const MIN_OVERLAP_AREA = 1;
@@ -18,6 +26,12 @@ const NEARBY_RADIUS = 500;
 const NEARBY_LIMIT = 5;
 // 주변 조사 이력 최대 표시 개수
 const SURVEY_LIMIT = 10;
+// 허용기준 주인을 찾을 때 열어 볼 주변 지정유산 최대 개수 (가까운 순, 한 번에 몇 개씩)
+const ALLOWANCE_CANDIDATES = 15;
+const ALLOWANCE_BATCH = 5;
+
+// 허용기준 묶음 번호 → 기준 (같은 서버 인스턴스 안에서 다시 찾지 않도록)
+const allowanceCache = new Map();
 
 // 필지 주변 좁은 범위라 평면으로 근사해 미터 단위 좌표로 바꿈
 function toMeters([lng, lat], origin) {
@@ -142,6 +156,53 @@ function roundArea(value) {
     return Math.round(value * 10) / 10;
 }
 
+function getCenter(geometry) {
+    const [minLng, minLat, maxLng, maxLat] = getBbox(geometry);
+    return [(minLng + maxLng) / 2, (minLat + maxLat) / 2];
+}
+
+// 허용기준 구역 도형으로 그 기준의 주인(지정유산)과 기준 내용을 찾음
+// 구역 묶음은 지정유산을 둘러싸므로, 묶음 전체 범위(조금 넓혀서) 안의 지정유산을 필지에서 가까운 순으로 열어 봄
+// (경주 시내처럼 여러 유산이 한 묶음을 같이 쓰는 경우가 있어, 필지에서 가까운 유산 이름을 보여줌)
+async function resolveAllowance(zone, parcelCenter) {
+    const seid = zone.properties.seid;
+    if (allowanceCache.has(seid)) return allowanceCache.get(seid);
+
+    const set = await fetchAllowanceZones(null, 50, seid);
+    const boxes = (set.length > 0 ? set : [zone]).map((item) => getBbox(item.geometry));
+    const pad = 0.002; // 약 200m
+    const setBbox = [
+        Math.min(...boxes.map((box) => box[0])) - pad,
+        Math.min(...boxes.map((box) => box[1])) - pad,
+        Math.max(...boxes.map((box) => box[2])) + pad,
+        Math.max(...boxes.map((box) => box[3])) + pad
+    ];
+    const center = parcelCenter;
+    const candidates = (await fetchDesignated(setBbox, 300))
+        .map((item) => {
+            const [lng, lat] = getCenter(item.geometry);
+            return { ...item, distance: Math.hypot(lng - center[0], lat - center[1]) };
+        })
+        .sort((a, b) => a.distance - b.distance)
+        .filter((item, index, list) => list.findIndex((other) => other.code === item.code) === index)
+        .slice(0, ALLOWANCE_CANDIDATES);
+
+    for (let i = 0; i < candidates.length; i += ALLOWANCE_BATCH) {
+        const batch = candidates.slice(i, i + ALLOWANCE_BATCH);
+        const results = await Promise.allSettled(batch.map((item) => fetchAllowanceCriteria(item.code)));
+        const index = results.findIndex((result) =>
+            result.status === 'fulfilled' && result.value && result.value.seid === seid
+        );
+        if (index >= 0) {
+            const found = { heritage: batch[index].name, ...results[index].value };
+            allowanceCache.set(seid, found);
+            return found;
+        }
+    }
+
+    return null;
+}
+
 // 각 구역과의 겹침을 계산해 겹치는 것만 남김
 function measureOverlaps(parcelFeature, items) {
     return items
@@ -208,7 +269,7 @@ module.exports = async function handler(req, res) {
 
     const nearbyBbox = [minLng - lngPad, minLat - latPad, maxLng + lngPad, maxLat + latPad];
 
-    const [zonesResult, sitesResult, surveysResult] = await Promise.allSettled([
+    const [zonesResult, sitesResult, surveysResult, allowanceResult] = await Promise.allSettled([
         fetchVworldFeatures(
             'LT_C_UO301',
             `BOX(${minLng},${minLat},${maxLng},${maxLat})`,
@@ -216,7 +277,8 @@ module.exports = async function handler(req, res) {
             registeredDomain
         ),
         fetchSites(nearbyBbox, 1000),
-        fetchSurveys(nearbyBbox, 1000)
+        fetchSurveys(nearbyBbox, 1000),
+        fetchAllowanceZones([minLng, minLat, maxLng, maxLat], 100)
     ]);
 
     if (zonesResult.status === 'rejected') {
@@ -227,6 +289,9 @@ module.exports = async function handler(req, res) {
     }
     if (surveysResult.status === 'rejected') {
         console.error('국가유산조사구역 조회 오류:', surveysResult.reason);
+    }
+    if (allowanceResult.status === 'rejected') {
+        console.error('현상변경 허용기준 조회 오류:', allowanceResult.reason);
     }
 
     const zones = zonesResult.status === 'fulfilled'
@@ -328,6 +393,37 @@ module.exports = async function handler(req, res) {
             }));
     }
 
+    // 현상변경 허용기준: 필지에 10㎡ 이상 걸친 구역마다 그 구역의 기준을 붙임
+    // (기준을 못 찾은 구역은 rule: null로 두고 화면에서 국가유산청 확인을 안내)
+    let allowance = null;
+    if (allowanceResult.status === 'fulfilled') {
+        const overlapped = measureOverlaps(
+            parcelFeature,
+            allowanceResult.value.map((zone) => ({ zone, geometry: zone.geometry }))
+        ).filter((item) => area(item.overlap) >= EDGE_OVERLAP_AREA);
+
+        allowance = await Promise.all(overlapped.map(async ({ zone, overlap }) => {
+            let criteria = null;
+            try {
+                criteria = await resolveAllowance(zone, getCenter(parcelFeature.geometry));
+            } catch (error) {
+                console.error('허용기준 내용 조회 오류:', error);
+            }
+            const rule = criteria && (
+                criteria.zones.find((item) => item.ids.includes(zone.properties.id)) ||
+                criteria.zones.find((item) => item.zone === zone.properties.zone)
+            );
+            return {
+                heritage: criteria ? criteria.heritage : null,
+                zone: zone.properties.zone,
+                overlapArea: roundArea(area(overlap)),
+                overlapRatio: roundArea((area(overlap) / parcelArea) * 100),
+                rule: rule ? { flat: rule.flat, slope: rule.slope } : null,
+                common: criteria ? criteria.common : []
+            };
+        }));
+    }
+
     // 응답에는 도형 대신 겹친 면적만 넣음
     const toResult = (items) => items && items.map(({ geometry, overlap, ...rest }) => ({
         ...rest,
@@ -365,6 +461,7 @@ module.exports = async function handler(req, res) {
         nearbySites,
         surveys,
         surveyStats,
+        allowance,
         overlap: {
             area: roundArea(totalArea),
             ratio: roundArea((totalArea / parcelArea) * 100),

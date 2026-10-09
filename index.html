@@ -323,6 +323,10 @@
             color: #666;
             font-size: 12px;
         }
+        .step-items {
+            margin: 4px 0 0 0;
+            padding-left: 18px;
+        }
         .survey-link {
             font-size: 12px;
             color: #1d72b8;
@@ -431,49 +435,68 @@
                 fillOpacity: 0.25
             }
         }).addTo(map);
-        const loadedSiteTiles = new Set();
-        const loadedSiteIds = new Set();
-
-        function loadSites() {
-            if (!map.hasLayer(sitesLayer) || map.getZoom() < SITES_MIN_ZOOM) return;
-
-            const bounds = map.getBounds();
-            const min = map.project(bounds.getNorthWest(), SITES_MIN_ZOOM).divideBy(256).floor();
-            const max = map.project(bounds.getSouthEast(), SITES_MIN_ZOOM).divideBy(256).floor();
-
-            for (let x = min.x; x <= max.x; x++) {
-                for (let y = min.y; y <= max.y; y++) {
-                    const tileKey = `${x}/${y}`;
-                    if (loadedSiteTiles.has(tileKey)) continue;
-                    loadedSiteTiles.add(tileKey);
-
-                    fetch(`/api/heritage-sites?x=${x}&y=${y}`)
-                        .then(response => {
-                            if (!response.ok) throw new Error('문화유적분포지도 조회 실패');
-                            return response.json();
-                        })
-                        .then(data => {
-                            // 여러 칸에 걸친 유적은 한 번만 그림
-                            const newFeatures = data.features.filter(feature => !loadedSiteIds.has(feature.properties.id));
-                            newFeatures.forEach(feature => loadedSiteIds.add(feature.properties.id));
-                            sitesLayer.addData(newFeatures);
-                        })
-                        .catch(error => {
-                            console.error('문화유적분포지도 불러오기 오류:', error);
-                            loadedSiteTiles.delete(tileKey); // 다음 이동 때 다시 시도
-                        });
-                }
+        // 국가유산청 현상변경 허용기준 구역 (기본은 꺼둠). 1구역(가장 엄격)일수록 진하게
+        const ALLOWANCE_COLORS = { '1': '#d62828', '2': '#f77f00', '3': '#fcbf49', '4': '#90be6d', '5': '#43aa8b' };
+        const allowanceLayer = L.geoJSON(null, {
+            interactive: false,
+            style: feature => {
+                const color = ALLOWANCE_COLORS[(feature.properties.zoneCode || '').charAt(1)] || '#577590';
+                return { color, weight: 1.5, dashArray: '4 3', fillColor: color, fillOpacity: 0.12 };
             }
+        });
+
+        // 줌 15 타일 칸 단위로 도형을 받아 레이어에 그림 (이미 받은 칸과 도형은 다시 그리지 않음)
+        function createTileLoader(layer, query, label) {
+            const loadedTiles = new Set();
+            const loadedIds = new Set();
+
+            return function load() {
+                if (!map.hasLayer(layer) || map.getZoom() < SITES_MIN_ZOOM) return;
+
+                const bounds = map.getBounds();
+                const min = map.project(bounds.getNorthWest(), SITES_MIN_ZOOM).divideBy(256).floor();
+                const max = map.project(bounds.getSouthEast(), SITES_MIN_ZOOM).divideBy(256).floor();
+
+                for (let x = min.x; x <= max.x; x++) {
+                    for (let y = min.y; y <= max.y; y++) {
+                        const tileKey = `${x}/${y}`;
+                        if (loadedTiles.has(tileKey)) continue;
+                        loadedTiles.add(tileKey);
+
+                        fetch(`/api/heritage-sites?x=${x}&y=${y}${query}`)
+                            .then(response => {
+                                if (!response.ok) throw new Error(`${label} 조회 실패`);
+                                return response.json();
+                            })
+                            .then(data => {
+                                // 여러 칸에 걸친 도형은 한 번만 그림
+                                const newFeatures = data.features.filter(feature => !loadedIds.has(feature.properties.id));
+                                newFeatures.forEach(feature => loadedIds.add(feature.properties.id));
+                                layer.addData(newFeatures);
+                            })
+                            .catch(error => {
+                                console.error(`${label} 불러오기 오류:`, error);
+                                loadedTiles.delete(tileKey); // 다음 이동 때 다시 시도
+                            });
+                    }
+                }
+            };
         }
 
+        const loadSites = createTileLoader(sitesLayer, '', '문화유적분포지도');
+        const loadAllowance = createTileLoader(allowanceLayer, '&layer=allowance', '현상변경 허용기준');
+
         map.on('moveend overlayadd', loadSites);
+        map.on('moveend overlayadd', loadAllowance);
         loadSites();
+
 
         // 지도 컨트롤 버튼 생성
         const overlayMaps = {
             "지적도 표시": cadastralLayer,
             "국가유산 구역 표시": heritageLayer,
-            "문화유적 분포 범위 표시": sitesLayer
+            "문화유적 분포 범위 표시": sitesLayer,
+            "현상변경 허용기준 구역 표시": allowanceLayer
         };
         L.control.layers(null, overlayMaps).addTo(map);
 
@@ -488,6 +511,7 @@
                     <div><span class="swatch" style="background: repeating-linear-gradient(135deg, #4bb3e8 0 2px, #fff 2px 4px);"></span>보호구역</div>
                     <div><span class="swatch" style="border: 2px solid #4caf50;"></span>역사문화환경 보존지역</div>
                     <div><span class="swatch" style="background: rgba(157, 78, 221, 0.25); border: 1.5px solid #7b2cbf;"></span>문화유적 분포 범위</div>
+                    <div><span class="swatch" style="border: 1.5px dashed #d62828;"></span>현상변경 허용기준 구역 (켰을 때, 빨강 1구역 → 초록 바깥 구역)</div>
                     <div><span class="swatch" style="border: 1.5px solid #e8a33d;"></span>지적도(필지 경계)</div>
                 </div>
             `;
@@ -946,6 +970,8 @@
                 <div class="step ${step.level}">
                     <div class="step-title">${escapeHtml(step.title)}</div>
                     <div>${escapeHtml(step.body)}</div>
+                    ${step.items ? `<ul class="step-items">${step.items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : ''}
+                    ${step.details ? `<details class="law"><summary>${escapeHtml(step.details.summary)}</summary><ul class="step-items">${step.details.items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></details>` : ''}
                     ${lawDetails(step.law)}
                 </div>`).join('');
 

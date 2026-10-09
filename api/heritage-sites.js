@@ -1,5 +1,7 @@
-// 지도 타일(줌 15) 한 칸 범위의 문화유적분포지도 도형을 GeoJSON으로 반환
-const { fetchSites } = require('./_heritage-gis');
+// 지도 타일(줌 15) 한 칸 범위의 국가유산청 도형을 GeoJSON으로 반환
+// - layer 없음: 문화유적분포지도
+// - layer=allowance: 현상변경 허용기준 구역
+const { fetchSites, fetchAllowanceZones } = require('./_heritage-gis');
 
 const TILE_ZOOM = 15;
 
@@ -33,7 +35,9 @@ module.exports = async function handler(req, res) {
     }
 
     try {
-        const features = await fetchSites(bbox, 1000);
+        const features = req.query.layer === 'allowance'
+            ? await fetchAllowanceZones(bbox, 1000)
+            : await fetchSites(bbox, 1000);
 
         res.setHeader(
             'Cache-Control',
@@ -42,10 +46,10 @@ module.exports = async function handler(req, res) {
 
         return res.status(200).json({ type: 'FeatureCollection', features });
     } catch (error) {
-        console.error('문화유적분포지도 조회 오류:', error);
+        console.error('국가유산청 도형 조회 오류:', error);
 
         return res.status(502).json({
-            message: '문화유적분포지도를 불러오지 못했습니다.'
+            message: '국가유산청 도형을 불러오지 못했습니다.'
         });
     }
 };

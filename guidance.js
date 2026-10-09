@@ -129,6 +129,32 @@
             });
         }
 
+        // 2-1. 현상변경 허용기준: 필지에 걸친 구역의 높이 등 기준. 이 범위 안이면 약식영향진단 생략 가능
+        const allowance = (result.allowance || []);
+        if (allowance.length > 0) {
+            const ruleText = (item) => {
+                if (!item.rule) return `${item.zone}: 기준 내용을 불러오지 못했어요`;
+                const same = item.rule.flat.join(', ') === item.rule.slope.join(', ');
+                return same
+                    ? `${item.zone}: ${item.rule.flat.join(', ')}`
+                    : `${item.zone}: 평지붕 ${item.rule.flat.join(', ')} / 경사지붕 ${item.rule.slope.join(', ')}`;
+            };
+            const lines = allowance.map((item) =>
+                `${item.heritage ? `'${item.heritage}' 주변 ` : ''}${ruleText(item)} (필지의 ${item.overlapRatio}%)`
+            );
+            const needsReview = allowance.some((item) => !item.rule ||
+                [...item.rule.flat, ...item.rule.slope].some((text) => /개별\s*검토|심의/.test(text)));
+            const common = [...new Set(allowance.flatMap((item) => item.common))];
+            steps.push({
+                level: needsReview ? 'check' : 'info',
+                title: '현상변경 허용기준 구역에 걸쳐요',
+                body: `국가유산 주변에서 지을 수 있는 건물의 높이 등을 미리 정해 둔 기준이에요. 역사문화환경 보존지역 안이라도 계획한 공사가 이 기준 안이면 약식영향진단을 생략할 수 있어요.${needsReview ? ' "개별검토"나 "심의"로 된 구역은 기준이 정해져 있지 않아 공사마다 따로 검토를 받아야 해요.' : ''}`,
+                items: lines,
+                details: common.length > 0 ? { summary: `공통 기준 ${common.length}개 보기`, items: common } : null,
+                law: `${LAW.simpleDiagnosis} (행위기준 고시와 약식영향진단 생략). 기준 원문은 국가유산청 국가유산공간정보서비스에서 확인하세요.`
+            });
+        }
+
         // 3. 지정구역·보호구역 (허가 조문은 아직 확인 전이라 문의 안내만)
         if (area.inDesignated || area.inProtection) {
             steps.push({
