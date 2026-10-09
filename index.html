@@ -744,6 +744,31 @@
         }
 
         // 필지 주소에서 동·리 이름 (발굴조사 현황은 주소 한 칸에서 그대로 찾아서 동·리 이름만 넣음)
+        // 필지 주소에서 관할 시·군·구 (일반구가 있는 시는 시청이 담당하는 경우가 많아 시까지만)
+        // 같은 이름(고성군 등)이 있어 시·도를 붙임. 예: "경상북도 경주시 인왕동" → 경상북도 경주시, "세종특별자치시 …" → 세종특별자치시
+        function addressDistrict(address) {
+            const [sido, sigungu] = (address || '').split(' ');
+            if (!sido) return null;
+            return /세종/.test(sido) || !sigungu ? sido : `${sido} ${sigungu}`;
+        }
+
+        // 관할 시·군·구 문화유산 담당 부서 찾기 (전국 담당 부서 목록이 공개돼 있지 않아 검색과 110 안내)
+        function contactSection(address) {
+            const district = addressDistrict(address);
+            if (!district) return '';
+            const query = encodeURIComponent(`${district} 문화유산 담당 부서 전화번호`);
+            return `
+                <h4>문의처</h4>
+                <div class="step info">
+                    <div class="step-title">관할: ${escapeHtml(district)} 문화유산 담당 부서</div>
+                    <div>위 안내에서 "관할 시·군·구에 문의"는 이 부서를 말해요. 지자체마다 부서 이름이 달라요(문화유산과, 문화예술과, 문화관광과 등).</div>
+                    <ul class="step-items">
+                        <li><a class="survey-link" href="https://search.naver.com/search.naver?query=${query}" target="_blank" rel="noopener">${escapeHtml(district)} 문화유산 담당 부서 찾기 ↗</a></li>
+                        <li>찾기 어려우면 정부민원안내콜센터 ☎ <a class="survey-link" href="tel:110">110</a>에 "${escapeHtml(district)} 문화유산 담당 부서"를 물어보면 연결해 줘요.</li>
+                    </ul>
+                </div>`;
+        }
+
         function addressDong(address) {
             const words = (address || '').split(' ').filter(word => /(동|리|가)$/.test(word) && !/(시|군|구|읍|면)$/.test(word));
             return words[words.length - 1] || null;
@@ -1059,6 +1084,7 @@
                 ${cost}
                 ${nearby}
                 ${surveySection}
+                ${contactSection(lastParcelResult.parcel && lastParcelResult.parcel.address)}
                 <h4>알아두세요</h4>
                 <ul class="notes">${notes}</ul>
                 ${incomplete}
