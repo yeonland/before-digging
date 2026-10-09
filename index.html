@@ -733,6 +733,15 @@
             return words[words.length - 1] || null;
         }
 
+        // 조사기관 연락처 (한국문화유산협회 회원기관 목록에 있는 기관만)
+        function agencyContact(agency) {
+            if (!agency) return '';
+            const home = agency.homepage
+                ? ` · <a class="survey-link" href="${encodeURI(agency.homepage)}" target="_blank" rel="noopener">홈페이지 ↗</a>`
+                : '';
+            return `<div class="survey-report">조사기관 ${escapeHtml(agency.name)} · ☎ <a class="survey-link" href="tel:${escapeHtml(agency.phone.split(/[\s/,]/)[0])}">${escapeHtml(agency.phone)}</a>${home}</div>`;
+        }
+
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
@@ -1004,6 +1013,7 @@
                     ${survey.distance === 0 ? '<b>필지에 걸침</b>' : `약 ${survey.distance}m`}${survey.year ? ` · ${survey.year}년` : ''}
                     ${survey.kind === 'excavation' ? reportSearchLink(survey.name) : ''}
                     ${survey.report ? `<div class="survey-report">${escapeHtml(survey.report)}</div>` : ''}
+                    ${agencyContact(survey.agency)}
                     ${(survey.followUps || []).length > 0 ? `<div class="survey-report">그 뒤 같은 범위: ${survey.followUps.map(item => `${escapeHtml(item.method)}${item.year ? `(${item.year}년)` : ''} ${reportSearchLink(item.name)}`).join(', ')}</div>` : ''}
                 </li>`;
             const dong = addressDong(lastParcelResult.parcel && lastParcelResult.parcel.address);
@@ -1018,7 +1028,7 @@
                     ? `<ul class="notes surveys">${surveys.map(surveyItem).join('')}</ul>`
                     : '<p class="panel-sub">500m 안에 등록된 조사 기록이 없어요.</p>'}
                 ${statusLink}
-                <p class="disclaimer" style="margin-top: 4px;">국가유산청 국가유산조사구역 자료예요. 가까운 순으로 최대 10건을 보여주고, 조사 종류와 연도는 보고서 이름에서 읽어낸 거라 실제와 다를 수 있어요. "보고서 찾기"는 국가유산청 발굴조사 보고서 목록을 조사 위치로 검색해요. 2017년쯤부터 제출된 발굴·시굴조사 보고서만 있고 지표조사 보고서는 없어서, 예전 조사는 안 나올 수 있어요.</p>`;
+                <p class="disclaimer" style="margin-top: 4px;">국가유산청 국가유산조사구역 자료예요. 가까운 순으로 최대 10건을 보여주고, 조사 종류와 연도는 보고서 이름에서 읽어낸 거라 실제와 다를 수 있어요. "보고서 찾기"는 국가유산청 발굴조사 보고서 목록을 조사 위치로 검색해요. 2017년쯤부터 제출된 발굴·시굴조사 보고서만 있고 지표조사 보고서는 없어서, 예전 조사는 안 나올 수 있어요. 조사기관 연락처는 한국문화유산협회 회원기관 목록에 있는 기관만 보여줘요. 보고서를 보거나 조사 내용을 물어볼 때 연락해 보세요.</p>`;
 
             const notes = guidance.notes.map(note => `
                 <li>${escapeHtml(note.text)} ${lawDetails(note.law)}</li>`).join('');

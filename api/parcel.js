@@ -16,6 +16,7 @@ const {
     fetchAllowanceCriteria,
     isPointInGeometry
 } = require('./_heritage-gis');
+const { findAgency } = require('./_agencies');
 
 // 이보다 작은 겹침은 무시 (㎡)
 const MIN_OVERLAP_AREA = 1;
@@ -380,7 +381,7 @@ module.exports = async function handler(req, res) {
                 })
                 .filter((excavation) => !seen.has(excavation.name) && seen.add(excavation.name))
                 .sort((a, b) => (a.year || 0) - (b.year || 0))
-                .map(({ name, method, year, report }) => ({ name, method, year, report }));
+                .map(({ name, method, year, report }) => ({ name, method, year, report, agency: findAgency(report) }));
         };
 
         surveys = uniqueSurveys
@@ -388,6 +389,7 @@ module.exports = async function handler(req, res) {
             .slice(0, SURVEY_LIMIT)
             .map(({ geometry, distance, ...survey }) => ({
                 ...survey,
+                agency: findAgency(survey.report),
                 ...(survey.kind === 'surfaceSite' && distance < 1 ? { followUps: findFollowUps({ ...survey, geometry }) } : {}),
                 distance: distance < 1 ? 0 : Math.round(distance)
             }));

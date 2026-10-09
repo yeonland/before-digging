@@ -1,0 +1,606 @@
+{
+  "source": "https://www.kaah.kr/asslist",
+  "updated": "2026-10-09",
+  "agencies": [
+    {
+      "name": "(재)가경고고학연구소",
+      "address": "충청남도 천안시 서북구 백석공단1로 10 A동 913호",
+      "phone": "041-621-8772",
+      "homepage": "http://www.archaeology.ne.kr/"
+    },
+    {
+      "name": "(재)가람문화유산연구원",
+      "address": "울산광역시 울주군 범서읍 점촌5길 15 구영빌딩 2층",
+      "phone": "052-212-3033",
+      "homepage": null
+    },
+    {
+      "name": "(재)가야문물연구원",
+      "address": "경상남도 함안군 대산면 구암로4, 2층 202호 / 부산광역시 강서구 맥도강변길 598-10",
+      "phone": "051-973-1112",
+      "homepage": "http://www.gayaheritage.co.kr/"
+    },
+    {
+      "name": "(재)강산문화연구원",
+      "address": "경남 김해시 주촌면 선지로97번길 6 에이스프라자 3층",
+      "phone": "055-337-2911",
+      "homepage": null
+    },
+    {
+      "name": "(재)강원고고문화연구원",
+      "address": "강원도 원주시 지정면 지래울로 41",
+      "phone": "033-743-8916",
+      "homepage": "http://www.ggmy.re.kr"
+    },
+    {
+      "name": "(재)강원역사문화연구원",
+      "address": "강원도 춘천시 우두하리길 33",
+      "phone": "033-815-1700",
+      "homepage": "http://gihc.or.kr/"
+    },
+    {
+      "name": "(재)겨레문화유산연구원",
+      "address": "경기도 고양시 덕양구 무원로 24 골드프라자 6층",
+      "phone": "031-973-2961",
+      "homepage": null
+    },
+    {
+      "name": "(재)경강문화유산연구원",
+      "address": "경기도 가평군 가평읍 가화로 225",
+      "phone": "031-581-0955",
+      "homepage": "https://gyeonggang-mo.imweb.me/"
+    },
+    {
+      "name": "(재)경기역사문화유산원",
+      "address": "경기도 수원시 팔달구 인계로 178 경기문화재단 5층",
+      "phone": "031-231-8551",
+      "homepage": "http://www.gjicp.or.kr"
+    },
+    {
+      "name": "(재)경남연구원 경남학센터",
+      "address": "경상남도 함안군 군북면 삼방로 34",
+      "phone": "055-585-4449",
+      "homepage": "https://www.gni.re.kr"
+    },
+    {
+      "name": "(재)경북문화재단 문화유산원",
+      "address": "경상북도 영천시 금호읍 원제2길 38",
+      "phone": "070-7113-9005",
+      "homepage": "http://gbcp.or.kr/"
+    },
+    {
+      "name": "(재)경상문화유산연구원",
+      "address": "경상남도 진주시 남강로 738 성산빌딩 5층",
+      "phone": "055-744-2370",
+      "homepage": "http://fgsicp.or.kr"
+    },
+    {
+      "name": "(재)고대문화재연구원",
+      "address": "전라남도 화순군 도곡면 새한실길34 / 광주광역시 남구 효덕로 291 / 제주특별자치도 제주시 도공로 25-1",
+      "phone": "062-413-3700",
+      "homepage": "http://www.godae.co.kr/main.php"
+    },
+    {
+      "name": "(재)고려문화유산연구원",
+      "address": "경기도 하남시 조정대로 150 아이테코 757호",
+      "phone": "031-790-3671",
+      "homepage": null
+    },
+    {
+      "name": "(재)고운문화유산연구원",
+      "address": "충청남도 아산시 아산로 150, 3층",
+      "phone": "041-534-9420",
+      "homepage": null
+    },
+    {
+      "name": "국가유산진흥원",
+      "address": "서울특별시 강남구 봉은사로 406 / 충청북도 청주시 서원구 현도면 노산리 2길 3-57 / 경상북도 경주시 용강상리길 40-9",
+      "phone": "042-936-8982 / 054-774-8167",
+      "homepage": "http://www.cprc.or.kr/"
+    },
+    {
+      "name": "(재)국강고고학연구소",
+      "address": "강원도 춘천시 동내면 동내로 150",
+      "phone": "033-263-9500",
+      "homepage": "http://kukgang.com"
+    },
+    {
+      "name": "(재)국방문화유산연구원",
+      "address": "서울특별시 중랑구 신내역로3길 40-36 신내데시앙플렉스 A동 608호",
+      "phone": "02-971-2561",
+      "homepage": null
+    },
+    {
+      "name": "(재)국토문화유산연구원",
+      "address": "경기도 남양주시 순화궁로 249, 별내역 파라곤스퀘어 M동 2115호",
+      "phone": "031-565-2341",
+      "homepage": "https://blog.naver.com/gukto0"
+    },
+    {
+      "name": "(재)금강문화유산연구원",
+      "address": "충청남도 계룡시 서금암로 17, 701호 / 대전광역시 유성구 동서대로 152 대청빌딩 3층",
+      "phone": "042-721-5701 / 042-824-2745",
+      "homepage": "http://www.geumgang.re.kr/"
+    },
+    {
+      "name": "(재)금오문화유산연구원",
+      "address": "경상북도 경주시 율동원길 80",
+      "phone": "054-744-9502",
+      "homepage": "http://www.goicp.or.kr/"
+    },
+    {
+      "name": "(재)기남문화유산연구원",
+      "address": "경기도 평택시 현신6길 36",
+      "phone": "031-652-0611",
+      "homepage": null
+    },
+    {
+      "name": "(재)기호문화유산연구원",
+      "address": "경기도 안성시 대덕면 중앙대학로 124번지 현대빌딩 2층",
+      "phone": "031-675-0511",
+      "homepage": "https://www.giho.me/"
+    },
+    {
+      "name": "(재)나라문화연구원",
+      "address": "전라남도 여수시 시청동1길 33, 2층 / 전라남도 여수시 상암로 695",
+      "phone": "061-686-8080",
+      "homepage": "http://www.narrar.kr"
+    },
+    {
+      "name": "(재)누리고고학연구소",
+      "address": "충청남도 공주시 신관로 69-11번지 대동프라자 4층",
+      "phone": "041-881-9610",
+      "homepage": null
+    },
+    {
+      "name": "(재)대동문화유산연구원",
+      "address": "경상북도 성주군 선남면 도성2길 14 / 대구광역시 달서구 두류공원로 260",
+      "phone": "053-628-0046",
+      "homepage": "http://www.daedongmy.or.kr/"
+    },
+    {
+      "name": "(재)대한문화재연구원",
+      "address": "전라남도 담양군 월산면 도개안길 75",
+      "phone": "061-382-0001",
+      "homepage": "http://www.daehanmy.or.kr/"
+    },
+    {
+      "name": "(재)도원문화유산연구원",
+      "address": "경기도 평택시 포승읍 포승원정길 21-4",
+      "phone": "031-686-8101",
+      "homepage": null
+    },
+    {
+      "name": "(재)동국문화재연구원",
+      "address": "경상북도 안동시 평화길 48 / 대구광역시 동구 안심로22길 50 세경프라자 5층",
+      "phone": "053-965-7401",
+      "homepage": "http://www.dong-guk.or.kr"
+    },
+    {
+      "name": "(재)동방문화유산연구원",
+      "address": "충남 홍성군 홍북읍 청사로174번길 25",
+      "phone": "041-635-0887",
+      "homepage": "http://www.dongbangih.or.kr"
+    },
+    {
+      "name": "(재)동북아문화재연구원",
+      "address": "울산광역시 울주군 온양읍 화산발리로 742-9, 4호 / 부산광역시 연제구 중앙대로 1193 삼조빌딩 2층",
+      "phone": "052-238-3082 / 051-502-8006",
+      "homepage": "http://www.dongbuka.or.kr"
+    },
+    {
+      "name": "(재)동북아지석묘연구소",
+      "address": "전라남도 화순군 능주면 지석로 1494",
+      "phone": "061-370-8800",
+      "homepage": "http://www.idolmen.or.kr"
+    },
+    {
+      "name": "(재)동서문물연구원",
+      "address": "경상남도 김해시 장유면 대청로104번길 66 B동",
+      "phone": "055-314-3891",
+      "homepage": "http://www.dongseocp.or.kr/"
+    },
+    {
+      "name": "(재)동서문화유산연구원",
+      "address": "전라남도 나주시 중앙로 16 혜안빌딩",
+      "phone": "061-332-1370",
+      "homepage": null
+    },
+    {
+      "name": "(재)동아세아문화재연구원",
+      "address": "경상남도 창원시 마산회원구 양덕북4길 48",
+      "phone": "055-265-9150",
+      "homepage": "http://www.feaci.or.kr/"
+    },
+    {
+      "name": "(재)두류문화연구원",
+      "address": "경상남도 김해시 장유로 330번길 5, SG이너스 3층",
+      "phone": "055-329-3936",
+      "homepage": "http://www.duryu.or.kr"
+    },
+    {
+      "name": "(재)라온문화유산연구원",
+      "address": "경기도 화성시 효행구 발안로 1227-2(정남면, 보화빌딩) 2, 3층",
+      "phone": "031-376-8366",
+      "homepage": "https://www.instagram.com/raonch_2022?igsh=OWVudjA1dDVmbGph"
+    },
+    {
+      "name": "(재)마한문화연구원",
+      "address": "전라남도 순천시 고지4길 7-30",
+      "phone": "061-751-6412",
+      "homepage": "http://www.mahan.or.kr/"
+    },
+    {
+      "name": "(재)미래문화유산연구원",
+      "address": "충청북도 청주시 상당구 낙영로 6번길 18, 1층 / 대전광역시 유성구 엑스포로 245, 3층",
+      "phone": "043-283-2586 / 042-863-2586",
+      "homepage": "http://www.mrich.or.kr/main#"
+    },
+    {
+      "name": "(재)민족문화유산연구원",
+      "address": "전라남도 목포시 옥암로 108",
+      "phone": "061-285-8335",
+      "homepage": null
+    },
+    {
+      "name": "(재)백제문화유산연구원",
+      "address": "충청남도 부여군 부여읍 삼충로 642",
+      "phone": "041-836-7211",
+      "homepage": null
+    },
+    {
+      "name": "(재)백제문화재단",
+      "address": "충청남도 부여군 부여읍 가탑로 75",
+      "phone": "042-832-1721",
+      "homepage": null
+    },
+    {
+      "name": "(재)부경문물연구원",
+      "address": "부산광역시 강서구 명지국제2로 28번길 34, 에코팰리스 501호",
+      "phone": "051-292-8545",
+      "homepage": "http://bkcri.or.kr/"
+    },
+    {
+      "name": "(재)비전문화유산연구원",
+      "address": "충청남도 아산시 시민로440번길 10, 202호 / 대전광역시 대덕구 한밭대로 1149, 4층",
+      "phone": "041-853-2770",
+      "homepage": null
+    },
+    {
+      "name": "(재)삼강문화유산연구원",
+      "address": "경상남도 진주시 대곡면 덕곡길 66",
+      "phone": "055-744-4704",
+      "homepage": "http://www.gai.or.kr/"
+    },
+    {
+      "name": "(재)삼도문화유산연구원",
+      "address": "경상남도 밀양시 수산중앙로 54",
+      "phone": "055-346-3100",
+      "homepage": "http://www.samdoicp.co.kr/"
+    },
+    {
+      "name": "(재)삼한문화유산연구원",
+      "address": "경기도 용인시 기흥구 상갈로 39-1, 2층 / 대구광역시 북구 동천로23길 48(우편물 수령처)",
+      "phone": "031-287-6007 / 053-581-6007",
+      "homepage": "http://www.samhan.or.kr/"
+    },
+    {
+      "name": "(재)새론문화유산연구원",
+      "address": "경기도 안성시 안성맞춤대로 1241",
+      "phone": "031-677-8981",
+      "homepage": null
+    },
+    {
+      "name": "(재)서경문화유산연구원",
+      "address": "경기도 용인시 처인구 중부대로 1758번길 83-7 / 전북특별자치도 김제시 문화1길 6",
+      "phone": "031-322-6031 / 063-543-6031",
+      "homepage": "http://www.scpri.or.kr/"
+    },
+    {
+      "name": "(재)서라벌문화유산연구원",
+      "address": "경상북도 경주시 충효3길 14, 3층",
+      "phone": "054-774-6254",
+      "homepage": null
+    },
+    {
+      "name": "(재)서울문화유산연구원",
+      "address": "경기도 수원시 팔달구 경수대로 446번길 48, 6층",
+      "phone": "031-231-1229",
+      "homepage": "http://www.chseoul.or.kr/"
+    },
+    {
+      "name": "(재)서원문화유산연구원",
+      "address": "충청북도 청주시 청원구 충청대로 97, 겔랑빌딩 3층",
+      "phone": "043-216-7077",
+      "homepage": null
+    },
+    {
+      "name": "(재)성림문화유산연구원",
+      "address": "경상북도 경주시 알천남로 298",
+      "phone": "054-741-2831",
+      "homepage": "http://www.sunglim.re.kr"
+    },
+    {
+      "name": "(재)세종문화유산재단",
+      "address": "경상북도 경산시 압량읍 압독2로 1길 25",
+      "phone": "053-752-0303",
+      "homepage": "http://www.sj.re.kr/"
+    },
+    {
+      "name": "(재)수도문물연구원",
+      "address": "경기도 파주시 마무리길 1, 만남빌딩 301호 / 서울특별시 서대문구 응암로 17, 성도빌딩 3층",
+      "phone": "02-304-6512",
+      "homepage": null
+    },
+    {
+      "name": "(재)신라문화유산연구원",
+      "address": "경상북도 경주시 현곡면 가삼골1길 19-10",
+      "phone": "054-777-3101",
+      "homepage": "http://www.kjsilla.re.kr"
+    },
+    {
+      "name": "(재)역사문화유산연구원",
+      "address": "경기도 용인시 기흥구 동백3로11번길 51 SH솔레치오 2층",
+      "phone": "031-282-2100",
+      "homepage": "http://www.hioh2015.com"
+    },
+    {
+      "name": "(재)영남문화유산연구원",
+      "address": "경상북도 칠곡군 가산면 천평2길 43",
+      "phone": "054-971-8085",
+      "homepage": "http://www.ynicp.or.kr/"
+    },
+    {
+      "name": "(재)영해문화유산연구원",
+      "address": "전라남도 나주시 금성관길 1-3, 2층 / 광주광역시 북구 첨단과기로 208번길 17-17 첨단시티빌딩 301호",
+      "phone": "061-331-5694 / 062-366-5692",
+      "homepage": null
+    },
+    {
+      "name": "(재)예맥문화유산연구원",
+      "address": "강원도 춘천시 우석로4번길 27",
+      "phone": "033-263-6457",
+      "homepage": null
+    },
+    {
+      "name": "(재)우리문화재연구원",
+      "address": "경상남도 창원시 의창구 읍성로 127번길 27",
+      "phone": "055-297-8992",
+      "homepage": "https://sites.google.com/view/wooricp"
+    },
+    {
+      "name": "(재)울산문화유산연구원",
+      "address": "울산광역시 울주군 언양읍 대암둔기로 29",
+      "phone": "052-254-5451",
+      "homepage": "http://www.usmy.or.kr/"
+    },
+    {
+      "name": "(재)울산연구원 문화유산연구실",
+      "address": "울산광역시 남구 삼산중로 6",
+      "phone": "052-283-7788",
+      "homepage": "https://www.uri.re.kr/"
+    },
+    {
+      "name": "(재)전남문화유산연구원",
+      "address": "전라남도 나주시 학생운동길 47-9",
+      "phone": "061-334-8365",
+      "homepage": "http://www.jnyc.or.kr/"
+    },
+    {
+      "name": "(재)전남문화재단 국가유산연구소",
+      "address": "전라남도 무안군 삼향읍 어진누리 66번지(수리채)",
+      "phone": "061-287-6811",
+      "homepage": "http://www.jncf.or.kr/culture/index.do"
+    },
+    {
+      "name": "(재)전라문화유산연구원",
+      "address": "전라북도 전주시 완산구 메너머3길 5-4",
+      "phone": "063-211-1444",
+      "homepage": "http://www.jeollayeon.or.kr"
+    },
+    {
+      "name": "(재)전북문화유산연구원",
+      "address": "전라북도 전주시 완산구 원서곡길 54-6 / 전라북도 김제시 화동길 125",
+      "phone": "063-241-5897",
+      "homepage": "http://www.jbmy.org"
+    },
+    {
+      "name": "(재)전주문화유산연구원",
+      "address": "전라북도 전주시 덕진구 전진로 32-4",
+      "phone": "063-247-8231",
+      "homepage": "http://www.jjmhyy.or.kr/"
+    },
+    {
+      "name": "(재)제주고고학연구소",
+      "address": "제주특별자치도 제주시 월산북길 69-10(노형동)",
+      "phone": "064-711-9996",
+      "homepage": "https://jejugogohak.tistory.com "
+    },
+    {
+      "name": "(재)제주문화유산연구원",
+      "address": "제주특별자치도 제주시 정실2길 3",
+      "phone": "064-712-8363",
+      "homepage": null
+    },
+    {
+      "name": "(재)중부고고학연구소",
+      "address": "경기도 수원시 장안구 팔달로199번길 10 / 경기도 광주시 중앙로319번길 10-27 부영빌딩 303호 / 경상남도 함안군 칠서면 삼칠로 281-4",
+      "phone": "070-8650-3200",
+      "homepage": "http://www.jia.or.kr/"
+    },
+    {
+      "name": "(재)중앙문화유산연구원",
+      "address": "경기도 성남시 분당구 판교역로 178 서건타워 904호 / 대전광역시 유성구 테크노7로 32-9",
+      "phone": "031-708-8001 / 042-933-2700",
+      "homepage": "http://www.jungang.re.kr/"
+    },
+    {
+      "name": "(재)중원문화유산연구원",
+      "address": "충청북도 청주시 흥덕구 직지대로 795",
+      "phone": "043-274-8865",
+      "homepage": "http://www.jungwon.re.kr/"
+    },
+    {
+      "name": "(재)천년문화유산연구원",
+      "address": "경상북도 경주시 광중길 24 스타타원 303호",
+      "phone": "054-620-2242",
+      "homepage": null
+    },
+    {
+      "name": "(재)청구고고연구원",
+      "address": "경기도 오산시 오산로 23, 2층",
+      "phone": "031-373-2753",
+      "homepage": null
+    },
+    {
+      "name": "(재)춘추문화유산연구원",
+      "address": "경상북도 경주시 양정로 344, 2,3층",
+      "phone": "054-777-1015",
+      "homepage": null
+    },
+    {
+      "name": "(재)충청남도역사문화연구원",
+      "address": "충청남도 공주시 연수원길 103",
+      "phone": "041-856-8662",
+      "homepage": "http://www.cihc.or.kr/"
+    },
+    {
+      "name": "(재)충청문화유산연구원",
+      "address": "충청남도 공주시 반포면 원당1길 34",
+      "phone": "041-856-8586",
+      "homepage": "http://www.crich.or.kr/"
+    },
+    {
+      "name": "(재)충청북도역사문화연구원",
+      "address": "충북 청주시 청원구 밀레니엄4로16",
+      "phone": "043-279-5400",
+      "homepage": "http://chungbuk.re.kr"
+    },
+    {
+      "name": "(재)통일문화유산연구원",
+      "address": "경상북도 구미시 임은길 26-1 2층 / 경상북도 경산시 진량읍 공단로 475 MG빌딩 3층",
+      "phone": "054-455-5945",
+      "homepage": null
+    },
+    {
+      "name": "(재)한강문화유산연구원",
+      "address": "경기도 부천시 원미구 평천로 655 부천테크노파크 402동 1303호 / 서울특별시 광진구 긴고랑로 26, 3층",
+      "phone": "032-323-8773 / 02-493-8770",
+      "homepage": "http://www.hich.or.kr/"
+    },
+    {
+      "name": "(재)한국고고환경연구소",
+      "address": "세종특별자치시 조치원읍 모과나무4길 43",
+      "phone": "044-850-0001",
+      "homepage": null
+    },
+    {
+      "name": "(재)한국문물연구원",
+      "address": "경상남도 양산시 동면 금오로 247",
+      "phone": "055-384-4201",
+      "homepage": "https://www.kaari.or.kr/"
+    },
+    {
+      "name": "(재)한국문화유산연구원",
+      "address": "경기도 용인시 수지구 푸른솔로 45 센터프라자빌딩 5층",
+      "phone": "031-265-9144",
+      "homepage": "http://www.kchi.or.kr/"
+    },
+    {
+      "name": "(재)한국선사문화연구원",
+      "address": "충청북도 청주시 용암북로 120번길 25",
+      "phone": "043-264-4191",
+      "homepage": "http://www.ikp.re.kr/"
+    },
+    {
+      "name": "(재)한라문화재연구원",
+      "address": "경기도 평택시 월곡길 17, 2층 206호",
+      "phone": "031-691-5163",
+      "homepage": null
+    },
+    {
+      "name": "(재)한반도문화유산연구원",
+      "address": "경상남도 김해시 인제로 238 한빛빌딩 3, 4층(삼방동)",
+      "phone": "055-781-2055",
+      "homepage": "http://www.ihanbando.org/"
+    },
+    {
+      "name": "(재)한백문화유산연구원",
+      "address": "경기도 성남시 중원구 사기막골로 148, 1201호",
+      "phone": "031-744-6300",
+      "homepage": "http://www.hbmy.or.kr/"
+    },
+    {
+      "name": "(재)한빛문화유산연구원",
+      "address": "경상북도 경산시 대학로 10길 9",
+      "phone": "053-851-8954",
+      "homepage": "http://www.hbicp.or.kr"
+    },
+    {
+      "name": "(재)한성문화재연구원",
+      "address": "경기도 화성시 남양읍 역동골로 112-19, 보기보기스퀘어 6층",
+      "phone": "031-366-8662",
+      "homepage": "http://한성문화재연구원.org/"
+    },
+    {
+      "name": "(재)한양문화유산연구원",
+      "address": "경기도 안양시 동안구 흥안대로 415 두산벤처다임 동관 1019호",
+      "phone": "031-478-3500",
+      "homepage": "http://www.hymy.or.kr"
+    },
+    {
+      "name": "(재)한얼문화유산연구원",
+      "address": "충청남도 공주시 웅진로207, 3층",
+      "phone": "041-854-9911",
+      "homepage": null
+    },
+    {
+      "name": "(재)한울문화유산연구원",
+      "address": "경기도 수원시 장안구 파장천로 31",
+      "phone": "031-271-5191",
+      "homepage": "http://www.hurich.or.kr/"
+    },
+    {
+      "name": "(재)한화문물연구원",
+      "address": "경상남도 김해시 진영읍 여래로 20번길 10",
+      "phone": "055-342-3288",
+      "homepage": "http://www.fhchi.or.kr/main.php"
+    },
+    {
+      "name": "(재)해동문화유산연구원",
+      "address": "경상남도 창원시 성산구 삼정자로51번길 3, 5층",
+      "phone": "055-284-1900",
+      "homepage": "http://www.hdicp.or.kr/"
+    },
+    {
+      "name": "(재)혜안문화유산연구원",
+      "address": "경기도 용인시 기흥구 강남로 13, 702호",
+      "phone": "031-893-6940",
+      "homepage": "http://www.hyean.or.kr"
+    },
+    {
+      "name": "(재)호남문화유산연구원",
+      "address": "전라남도 담양군 봉산면 탄금길 9-12 / 전라북도 전주시 덕진구 동부대로 547",
+      "phone": "061-383-3640 / 063-246-7968",
+      "homepage": "http://www.hmy.or.kr/"
+    },
+    {
+      "name": "(재)호서문화유산연구원",
+      "address": "충청북도 청주시 서원구 남이면 남석로 376(석실리329)",
+      "phone": "043-275-3115",
+      "homepage": "http://hoseo.re.kr/"
+    },
+    {
+      "name": "(재)화랑문화유산연구원",
+      "address": "경상북도 경주시 유림로 53-8, 경포빌딩 2층",
+      "phone": "054-746-1370",
+      "homepage": null
+    },
+    {
+      "name": "(재)화서문화유산연구원",
+      "address": "경기도 고양시 덕양구 삼송로12, 601~604호(원흥동, 반도유스퀘어)",
+      "phone": "031-8073-9030",
+      "homepage": "http://www.hwaseo.or.kr/"
+    }
+  ]
+}
