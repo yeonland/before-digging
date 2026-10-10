@@ -207,6 +207,7 @@ body {
 .locate-button svg {
     vertical-align: middle;
 }
+.spinner,
 .locate-spinner {
     display: inline-block;
     width: 12px;
@@ -219,6 +220,17 @@ body {
 }
 @keyframes locate-spin {
     to { transform: rotate(360deg); }
+}
+
+/* 기다리는 중 표시 (결과 패널) */
+.loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.loading-time {
+    color: #666;
+    font-size: 12px;
 }
 .map-legend .swatch {
     display: inline-block;

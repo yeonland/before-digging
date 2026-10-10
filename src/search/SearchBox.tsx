@@ -1,5 +1,5 @@
 // 주소·장소·좌표 검색 (VWorld 검색 API, 좌표는 좌표계마다 위치를 계산해 고르게 함)
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { parseCoordinates } from './coordinates';
 import { loadDxfSite } from '../site/loadDxfSite';
 import { fetchAddresses, getJson } from '../shared/api';
@@ -17,6 +17,7 @@ export function SearchBox({ onGo, onDxfFile }: {
     const [keyword, setKeyword] = useState('');
     const [list, setList] = useState<ListState>({ kind: 'hidden' });
     const fileInput = useRef<HTMLInputElement>(null);
+    const box = useRef<HTMLDivElement>(null);
     const showMessage = (text: string) => setList({ kind: 'message', text });
 
     function go(result: SearchResult) {
@@ -85,8 +86,27 @@ export function SearchBox({ onGo, onDxfFile }: {
         }
     }
 
+    // 목록이 열려 있을 때 검색창 밖(지도 등)을 누르거나 Esc를 누르면 닫음
+    const isOpen = list.kind !== 'hidden';
+    useEffect(() => {
+        if (!isOpen) return;
+        const close = () => setList({ kind: 'hidden' });
+        const onPointerDown = (event: PointerEvent) => {
+            if (!box.current?.contains(event.target as Node)) close();
+        };
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') close();
+        };
+        document.addEventListener('pointerdown', onPointerDown);
+        document.addEventListener('keydown', onKeyDown);
+        return () => {
+            document.removeEventListener('pointerdown', onPointerDown);
+            document.removeEventListener('keydown', onKeyDown);
+        };
+    }, [isOpen]);
+
     return (
-        <div id="search-box">
+        <div id="search-box" ref={box}>
             <div className="search-row">
                 <input
                     type="text"

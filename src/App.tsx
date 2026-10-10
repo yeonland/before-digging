@@ -13,10 +13,11 @@ import { buildShareUrl, readSharedLink, type LatLng, type PanelInputs, type Shar
 import { SiteSetup, SiteTable, type SiteDraft } from './site/SitePanels';
 import { loadDxfSite } from './site/loadDxfSite';
 import { fetchAddresses, getJson } from './shared/api';
+import { Loading } from './shared/Loading';
 import type { AnalysisResult, PointResult, SiteResponse } from './shared/types';
 
 type Panel =
-    | { kind: 'message'; text: string } // 도면 사업부지 진행 안내
+    | { kind: 'message'; title: string; text: string; hint?: string; loadingSince?: number } // 진행 중·실패 안내
     | { kind: 'siteSetup'; draft: SiteDraft }
     | { kind: 'guidance'; id: number; data: AnalysisResult; options: ResultOptions; location: LatLng | null; diagnosedAt: Date };
 
@@ -78,6 +79,7 @@ export default function App() {
         const marker = controller.placeMarker(latlng);
         marker.bindPopup('필지와 국가유산 데이터 확인 중...', { maxWidth: 320 }).openPopup();
         setShareLocation(latlng);
+        setPanel({ kind: 'message', title: '진단 결과 · 해야 할 일', text: '필지와 국가유산 데이터를 확인하는 중이에요...', loadingSince: Date.now() });
 
         const query = `lat=${latlng.lat}&lng=${latlng.lng}`;
         try {
@@ -98,7 +100,9 @@ export default function App() {
             setPopupContent(marker, <PointPopup data={pointData} />);
         } catch (error) {
             console.error('진단 오류:', error);
+            if (!controller.isActiveMarker(marker)) return;
             marker.setPopupContent('국가유산 데이터를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+            setPanel({ kind: 'message', title: '진단 결과 · 해야 할 일', text: '국가유산 데이터를 확인하지 못했어요. 잠시 후 같은 곳을 다시 눌러 주세요.' });
         }
     }
 
@@ -133,13 +137,14 @@ export default function App() {
     // 도면(DXF)으로 사업부지 진단: 파일 고르기 → 경계 레이어·좌표계 고르기 → 부지 전체 + 필지별 진단
     // 도면 파일은 브라우저 안에서만 읽고, 서버에는 바꾼 경계 좌표만 보냄
     // ---------------------------------------------------------------
-    function showSiteMessage(text: string) {
-        setPanel({ kind: 'message', text });
+    // loading: 기다리는 중이면 도는 원과 지난 시간을 함께 보여줌
+    function showSiteMessage(text: string, options: { loading?: boolean; hint?: string } = {}) {
+        setPanel({ kind: 'message', title: '도면으로 사업부지 진단', text, hint: options.hint, loadingSince: options.loading ? Date.now() : undefined });
         scrollTo('result-panel');
     }
 
     async function handleDxfFile(file: File) {
-        showSiteMessage('도면을 읽는 중이에요...');
+        showSiteMessage('도면을 읽는 중이에요...', { loading: true });
         try {
             const dxf = await loadDxfSite();
             const { layers, elevations } = dxf.readBoundaries(dxf.decodeDxf(await file.arrayBuffer()));
@@ -157,7 +162,7 @@ export default function App() {
     // 1. 경계 레이어, 2. 좌표계 고르기. 좌표계 후보마다 그렇게 읽으면 어느 주소가 되는지 보여줌
     async function showSiteSetup(next: SiteDraft) {
         siteDraft.current = next;
-        showSiteMessage('좌표계 후보 위치를 확인하는 중이에요...');
+        showSiteMessage('좌표계 후보 위치를 확인하는 중이에요...', { loading: true });
 
         const dxf = await loadDxfSite();
         const candidates = dxf.crsCandidates(next.layers[next.layerIndex]);
@@ -190,7 +195,10 @@ export default function App() {
         const layer = draft.layers[draft.layerIndex];
         const dxf = await loadDxfSite();
         const geometry = dxf.toGeometry(layer, draft.crs!);
-        showSiteMessage('사업부지와 걸친 필지를 진단하는 중이에요... 필지가 많으면 1분 가까이 걸릴 수 있어요.');
+        showSiteMessage('사업부지와 걸친 필지를 진단하는 중이에요...', {
+            loading: true,
+            hint: '부지에 걸친 필지마다 국가유산 구역·문화유적·조사 이력을 확인해요. 필지가 많으면 1분 가까이 걸릴 수 있으니 이 화면에서 기다려 주세요.'
+        });
         try {
             const response = await fetch('/api/site', {
                 method: 'POST',
@@ -304,7 +312,13 @@ export default function App() {
 
     let panelContent: ReactNode = null;
     if (panel?.kind === 'message') {
-        panelContent = <><h3>도면으로 사업부지 진단</h3><p>{panel.text}</p></>;
+        panelContent = (
+            <>
+                <h3>{panel.title}</h3>
+                {panel.loadingSince ? <Loading text={panel.text} since={panel.loadingSince} /> : <p>{panel.text}</p>}
+                {panel.hint && <p className="panel-sub">{panel.hint}</p>}
+            </>
+        );
     } else if (panel?.kind === 'siteSetup') {
         const draft = panel.draft;
         panelContent = (
