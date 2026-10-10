@@ -4,8 +4,8 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
-const { isPointInGeometry } = require('./_heritage-gis');
-const meta = require('../data/boreholes-meta.json');
+const { isPointInGeometry } = require('./heritage-gis');
+const meta = require('../../data/boreholes-meta.json');
 
 // scripts/update-boreholes.mjs와 같은 값
 const CELL = 0.01;
@@ -20,7 +20,7 @@ let index = null;
 // 칸(약 1km) → 그 칸 시추공의 [시작, 끝] 위치. 파일이 칸 순서로 정렬돼 있음
 function load() {
     if (index) return index;
-    const buffer = zlib.gunzipSync(fs.readFileSync(path.join(__dirname, '..', 'data', 'boreholes.bin.gz')));
+    const buffer = zlib.gunzipSync(fs.readFileSync(path.join(__dirname, '..', '..', 'data', 'boreholes.bin.gz')));
     const data = new Int32Array(buffer.buffer, buffer.byteOffset, buffer.byteLength / 4);
     const cells = new Map();
     for (let i = 0; i < data.length; i += 4) {

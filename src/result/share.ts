@@ -1,6 +1,6 @@
 // 결과 공유 링크: 진단한 위치(+ 공사 종류·면적·해발 입력)를 주소창에 담음
 // 결과를 저장하지 않고, 링크를 열 때 그 시점 데이터로 다시 진단
-import { readElevation, readNumber } from './format';
+import { readElevation, readNumber } from '../shared/format';
 
 export interface LatLng {
     lat: number;

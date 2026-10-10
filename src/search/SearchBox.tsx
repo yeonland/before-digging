@@ -1,8 +1,8 @@
 // 주소·장소·좌표 검색 (VWorld 검색 API, 좌표는 좌표계마다 위치를 계산해 고르게 함)
 import { useRef, useState } from 'react';
-import { parseCoordinates } from '../lib/format';
-import { loadDxfSite } from '../lib/loaders';
-import type { SearchResult } from '../types';
+import { parseCoordinates } from './coordinates';
+import { loadDxfSite } from '../site/loadDxfSite';
+import type { SearchResult } from '../shared/types';
 
 type ListState =
     | { kind: 'hidden' }

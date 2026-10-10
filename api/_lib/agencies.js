@@ -1,6 +1,6 @@
 // 보고서 이름("기관, 연도, 제목")의 조사기관을 한국문화유산협회 회원기관 목록(data/agencies.json)과 맞춰 연락처를 찾음
 // 목록 갱신: node --use-system-ca scripts/update-agencies.mjs
-const { agencies } = require('../data/agencies.json');
+const { agencies } = require('../../data/agencies.json');
 
 // 기관 이름이 바뀐 경우 (예전 이름 → 지금 이름, 비교용으로 정리한 형태)
 const RENAMED = {

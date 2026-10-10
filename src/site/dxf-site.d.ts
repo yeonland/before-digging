@@ -1,6 +1,6 @@
 // dxf-site.js의 타입 (규칙은 dxf-site.js에서 고침)
 import type { MultiPolygon } from 'geojson';
-import type { Elevation } from '../types';
+import type { Elevation } from '../shared/types';
 
 type Ring = [number, number][];
 

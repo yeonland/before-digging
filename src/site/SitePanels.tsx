@@ -1,8 +1,8 @@
 // 도면(DXF) 사업부지: 경계 레이어·좌표계 고르기, 필지별 진단 표
-import type { CrsCandidate, DxfLayer, ElevationPoint } from '../lib/dxf-site.js';
-import type { RiskLevel } from '../lib/guidance.js';
-import { formatArea, shortAddress } from '../lib/format';
-import type { SiteParcelResult, SiteResponse } from '../types';
+import type { CrsCandidate, DxfLayer, ElevationPoint } from './dxf-site.js';
+import type { RiskLevel } from '../result/guidance.js';
+import { formatArea, shortAddress } from '../shared/format';
+import type { SiteParcelResult, SiteResponse } from '../shared/types';
 
 export interface SiteDraft {
     fileName: string;

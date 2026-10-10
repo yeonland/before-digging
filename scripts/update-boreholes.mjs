@@ -19,7 +19,7 @@ const OUTPUT_FILE = new URL('../data/boreholes.bin.gz', import.meta.url);
 const META_FILE = new URL('../data/boreholes-meta.json', import.meta.url);
 const EPSG5186 = '+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 +y_0=600000 +ellps=GRS80 +units=m +no_defs';
 
-// 서버(api/_boreholes.js)와 같은 값이어야 함: 칸 크기(도), 숫자 저장 배율
+// 서버(api/_lib/boreholes.js)와 같은 값이어야 함: 칸 크기(도), 숫자 저장 배율
 const CELL = 0.01;
 const COORD_SCALE = 1e6;
 const VALUE_SCALE = 100;

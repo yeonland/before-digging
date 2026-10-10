@@ -1,5 +1,5 @@
 // guidance.js의 타입 (규칙은 guidance.js에서 고침)
-import type { AnalysisResult } from '../types';
+import type { AnalysisResult } from '../shared/types';
 
 export interface Step {
     level: 'required' | 'check' | 'info';

@@ -13,7 +13,7 @@ const {
     getBbox,
     getOverlap,
     roundArea
-} = require('./_analyze');
+} = require('./_lib/analyze');
 
 // 너무 넓은 부지는 외부 자료 요청이 많아져 거절 (서비스 기준)
 const MAX_SITE_AREA = 2000000; // 2㎢

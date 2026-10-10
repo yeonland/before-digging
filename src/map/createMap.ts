@@ -5,7 +5,7 @@ import type { Feature, FeatureCollection, Geometry } from 'geojson';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-import type { RiskLevel } from '../lib/guidance.js';
+import type { RiskLevel } from '../result/guidance.js';
 
 // 번들러에서는 Leaflet 기본 핀 그림을 직접 넣어야 함 (기본 핀은 CSS에서 찾은 경로를 앞에 붙여서 깨짐)
 L.Marker.prototype.options.icon = L.icon({

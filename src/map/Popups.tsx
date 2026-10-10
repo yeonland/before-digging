@@ -1,19 +1,13 @@
 // 지도 핀 팝업: 필지 진단 요약, 지적도에 없는 곳의 지점 진단
-import { buildRisk } from '../lib/guidance.js';
-import { formatArea, overlapItems, type OverlapItem } from '../lib/format';
-import type { AnalysisResult, PointResult } from '../types';
+import { buildRisk } from '../result/guidance.js';
+import { formatArea, overlapItems } from '../shared/format';
+import { OverlapLabel } from '../shared/OverlapLabel';
+import type { AnalysisResult, PointResult } from '../shared/types';
 
 const text13 = { margin: 0, fontSize: 13 };
 const note12 = { margin: '6px 0 0 0', fontSize: 12, color: '#666' };
 const listStyle = { margin: '5px 0 0 0', paddingLeft: 18, fontSize: 13 };
 const titleStyle = (color: string) => ({ margin: '0 0 5px 0', color });
-
-// 이름이 없는 구역(역사문화환경 보존지역 등)은 종류만 표시
-export function OverlapLabel({ item }: { item: Pick<OverlapItem, 'name' | 'type'> }) {
-    return item.name
-        ? <>{item.name} <span style={{ color: '#666' }}>({item.type})</span></>
-        : <>{item.type}</>;
-}
 
 // 팝업이 지도를 너무 가리지 않게 많이 겹친 3개만 보여주고, 나머지는 결과 패널의 전체 목록으로 보냄
 const POPUP_ITEM_LIMIT = 3;

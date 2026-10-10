@@ -54,12 +54,12 @@
 ```
 
 - **화면**: [React](https://react.dev/) + TypeScript, [Vite](https://vite.dev/), 지도는 [Leaflet](https://leafletjs.com/)
-  - `src/components/`: 검색창, 결과 패널, 지도 팝업, 도면 사업부지 화면
-  - `src/map/createMap.ts`: 지도·레이어·범례·내 위치 버튼
+  - 기능별 폴더: `src/map/`(지도·레이어·범례·핀 팝업), `src/search/`(검색창·좌표 입력), `src/result/`(결과 패널·안내 규칙·공유 링크·담당 부서), `src/site/`(도면 사업부지·DXF 읽기), `src/shared/`(같이 쓰는 함수·서버 응답 타입)
+- **서버 폴더**: `api/`의 파일 하나가 주소 하나(`/api/parcel` 등), 여러 주소가 같이 쓰는 부품은 `api/_lib/`
 - **서버**: Vercel 서버리스 함수(Node.js). VWorld와 법령 API가 해외 접속을 막아서 서울 리전(`icn1`)에 고정
 - **도형 계산**: [Turf.js](https://turfjs.org/)
 - **자동화**: GitHub Actions (`.github/workflows/law-watch.yml`)
-- **안내 규칙**: 해야 할 일, 비용, 위험도 등급 규칙은 `src/lib/guidance.js` 한 파일에 모음 (도면 읽기 규칙은 `src/lib/dxf-site.js`)
+- **안내 규칙**: 해야 할 일, 비용, 위험도 등급 규칙은 `src/result/guidance.js` 한 파일에 모음 (도면 읽기 규칙은 `src/site/dxf-site.js`)
 
 ## 직접 실행하기
 
@@ -77,13 +77,16 @@ npx vercel dev
 
 - `VWORLD_API_KEY`: [브이월드](https://www.vworld.kr) 오픈API 인증키
 - `LAW_API_OC`: [국가법령정보 공동활용](https://open.law.go.kr) 인증값 (법령 개정 확인에만 필요)
-- 배포 방법은 [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md)를 참고하세요.
+- 배포 방법은 [docs/VERCEL_DEPLOY.md](docs/VERCEL_DEPLOY.md)를 참고하세요.
 
 ## 문서
 
 - [기획서](docs/기획서.md): 문제 정의, 대상 사용자, 진행 단계, 데이터 한계, 법·제도 근거, 위험도 기준
 
 ## 업데이트 기록
+
+### 2026-10-11
+- 파일을 기능별 폴더로 정리: 화면은 지도·검색·결과·도면·공용(`src/map`, `search`, `result`, `site`, `shared`), 서버 공용 부품은 `api/_lib/`, 배포 안내는 `docs/`로. 결과 패널 파일 이름을 `ResultPanel`·`ResultSections`로 바꿈. 동작은 그대로
 
 ### 2026-10-10
 - 화면을 React + TypeScript(Vite)로 전환: 2,000줄짜리 `index.html`을 컴포넌트로 나눔. 안내 규칙·도면 읽기 규칙과 `api/`는 그대로, 기능·화면도 전환 전과 같음. 도면 라이브러리는 CDN 대신 npm으로 넣고 쓸 때만 받음

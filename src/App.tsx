@@ -4,20 +4,20 @@ import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import type L from 'leaflet';
 import { createMap, type MapController } from './map/createMap';
-import { buildRisk } from './lib/guidance.js';
-import { loadDepartments, type DepartmentData } from './lib/departments';
-import { loadDxfSite } from './lib/loaders';
-import { buildShareUrl, readSharedLink, type LatLng, type PanelInputs, type SharedLink } from './lib/share';
-import type { AnalysisResult, PointResult, SearchResult, SiteResponse } from './types';
-import { ParcelPopup, PointPopup } from './components/Popups';
-import { GuidancePanel, type GuidanceOptions } from './components/GuidancePanel';
-import { SiteSetup, SiteTable, type SiteDraft } from './components/SitePanels';
-import { SearchBox } from './components/SearchBox';
+import { ParcelPopup, PointPopup } from './map/Popups';
+import { SearchBox } from './search/SearchBox';
+import { ResultPanel, type ResultOptions } from './result/ResultPanel';
+import { buildRisk } from './result/guidance.js';
+import { loadDepartments, type DepartmentData } from './result/departments';
+import { buildShareUrl, readSharedLink, type LatLng, type PanelInputs, type SharedLink } from './result/share';
+import { SiteSetup, SiteTable, type SiteDraft } from './site/SitePanels';
+import { loadDxfSite } from './site/loadDxfSite';
+import type { AnalysisResult, PointResult, SearchResult, SiteResponse } from './shared/types';
 
 type Panel =
     | { kind: 'message'; text: string } // 도면 사업부지 진행 안내
     | { kind: 'siteSetup'; draft: SiteDraft }
-    | { kind: 'guidance'; id: number; data: AnalysisResult; options: GuidanceOptions; location: LatLng | null; diagnosedAt: Date };
+    | { kind: 'guidance'; id: number; data: AnalysisResult; options: ResultOptions; location: LatLng | null; diagnosedAt: Date };
 
 // React로 그린 내용을 Leaflet 핀 팝업에 넣음 (핀이 지도에서 빠지면 정리)
 function setPopupContent(marker: L.Marker, content: ReactNode) {
@@ -55,7 +55,7 @@ export default function App() {
     }, [scrollTarget]);
 
     // options.elevation: 도면에서 읽은 표고. 공유 링크로 열었으면 링크의 입력값을 채움
-    function showGuidancePanel(data: AnalysisResult, options: GuidanceOptions, location: LatLng | null) {
+    function showResultPanel(data: AnalysisResult, options: ResultOptions, location: LatLng | null) {
         const shared = sharedInputs.current;
         sharedInputs.current = null;
         const text = (value: number | null | undefined, fallback: string) => value !== null && value !== undefined ? String(value) : fallback;
@@ -94,7 +94,7 @@ export default function App() {
                     setPopupContent(marker, (
                         <ParcelPopup data={result} onShowPanel={() => scrollTo('result-panel')} onShowOverlaps={() => scrollTo('overlap-list')} />
                     ));
-                    showGuidancePanel(result, {}, latlng);
+                    showResultPanel(result, {}, latlng);
                     return;
                 }
                 setPanel(null);
@@ -251,7 +251,7 @@ export default function App() {
         };
 
         setShareLocation(null);
-        showGuidancePanel(siteData, {
+        showResultPanel(siteData, {
             title: '도면 사업부지 진단 결과 · 해야 할 일',
             areaLabel: '부지 면적',
             siteTable: true,
@@ -276,7 +276,7 @@ export default function App() {
     function showSiteParcel(data: SiteResponse, index: number) {
         const item = data.parcels[index];
         mapRef.current!.highlightParcel(item.parcel.geometry);
-        showGuidancePanel(item, { back: true, shareable: false }, null);
+        showResultPanel(item, { back: true, shareable: false }, null);
         scrollTo('result-panel');
     }
 
@@ -342,7 +342,7 @@ export default function App() {
                     {shareLocation && <div className="print-link">다시 보기: {shareUrl}</div>}
                     <div>공공데이터는 바뀔 수 있어서, 같은 위치도 나중에 다시 진단하면 결과가 달라질 수 있어요.</div>
                 </div>
-                <GuidancePanel
+                <ResultPanel
                     key={guidance.id}
                     data={guidance.data}
                     options={guidance.options}

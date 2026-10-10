@@ -2,7 +2,7 @@
 // - VWorld와 국가유산청 서버가 해외 접속을 막을 때가 있어 서울 리전의 이 함수에서 확인
 // - scripts/check-health.mjs가 매일 불러서, 실패하면 GitHub 이슈를 만듦
 // - 결과가 비어 있어도 실패로 봄 (응답 형식이나 레이어 이름이 바뀌면 빈 결과가 오기 쉬움)
-const { fetchVworldFeatures } = require('./_analyze');
+const { fetchVworldFeatures } = require('./_lib/analyze');
 const {
     fetchSites,
     fetchSurveys,
@@ -10,7 +10,7 @@ const {
     fetchDesignated,
     fetchAllowanceCriteria,
     fetchWorldHeritage
-} = require('./_heritage-gis');
+} = require('./_lib/heritage-gis');
 
 const TIMEOUT_MS = 20000;
 

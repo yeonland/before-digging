@@ -19,9 +19,9 @@ const {
     fetchAllowanceCriteria,
     fetchWorldHeritage,
     isPointInGeometry
-} = require('./_heritage-gis');
-const { findAgency } = require('./_agencies');
-const { nearbyBoreholes } = require('./_boreholes');
+} = require('./heritage-gis');
+const { findAgency } = require('./agencies');
+const { nearbyBoreholes } = require('./boreholes');
 
 // 이보다 작은 겹침은 무시 (㎡)
 const MIN_OVERLAP_AREA = 1;

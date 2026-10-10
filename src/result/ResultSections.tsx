@@ -1,10 +1,8 @@
 // 결과 패널 아래쪽: 해야 할 일, 굴착 깊이, 비용, 주변 유적·조사 이력, 문의처, 알아두세요
-import type { Guidance } from '../lib/guidance.js';
-import { findDepartment, officeName, type DepartmentData } from '../lib/departments';
-import {
-    addressDistrict, addressDong, reportSearchWord, REPORT_SEARCH_URL, STATUS_SEARCH_URL
-} from '../lib/format';
-import type { Agency, AnalysisResult, Elevation, Survey } from '../types';
+import type { Guidance } from './guidance.js';
+import { findDepartment, officeName, type DepartmentData } from './departments';
+import { addressDistrict, addressDong, reportSearchWord, REPORT_SEARCH_URL, STATUS_SEARCH_URL } from './links';
+import type { Agency, AnalysisResult, Elevation, Survey } from '../shared/types';
 
 export function LawDetails({ law }: { law?: string | null }) {
     return law ? <details className="law"><summary>법령 근거</summary>{law}</details> : null;
@@ -181,7 +179,7 @@ function ContactSection({ address, departments }: { address?: string; department
     );
 }
 
-export function GuidanceBody({ data, guidance, ground, depth, elevation, departments, onUseBorehole }: {
+export function ResultSections({ data, guidance, ground, depth, elevation, departments, onUseBorehole }: {
     data: AnalysisResult;
     guidance: Guidance;
     ground: number | null;

@@ -1,6 +1,6 @@
-// /api 응답 모양 (api/_analyze.js, api/parcel.js, api/site.js, api/heritage.js, api/search.js)
+// /api 응답 모양 (api/_lib/analyze.js, api/parcel.js, api/site.js, api/heritage.js, api/search.js)
 import type { Geometry } from 'geojson';
-import type { Risk } from './lib/guidance.js';
+import type { Risk } from '../result/guidance.js';
 
 export interface Zone {
     type: string;

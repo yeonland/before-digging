@@ -2,7 +2,7 @@
 // - layer 없음: 문화유적분포지도
 // - layer=allowance: 현상변경 허용기준 구역
 // - layer=world: 세계유산 구역·완충구역·세계유산지구
-const { fetchSites, fetchAllowanceZones, fetchWorldHeritage } = require('./_heritage-gis');
+const { fetchSites, fetchAllowanceZones, fetchWorldHeritage } = require('./_lib/heritage-gis');
 
 const LAYERS = {
     allowance: fetchAllowanceZones,

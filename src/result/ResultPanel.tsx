@@ -1,14 +1,14 @@
 // 진단 결과 패널: 위험도, 걸친 영역, 입력칸(공사 종류·면적·해발), 해야 할 일 (규칙은 guidance.js)
 import { useCallback, useState, type ReactNode } from 'react';
-import { buildGuidance, buildRisk, type Risk } from '../lib/guidance.js';
-import { formatArea, overlapItems, readElevation, readNumber } from '../lib/format';
-import { WORK_TYPES, type PanelInputs } from '../lib/share';
-import type { DepartmentData } from '../lib/departments';
-import type { AnalysisResult, Elevation } from '../types';
-import { GuidanceBody } from './GuidanceBody';
-import { OverlapLabel } from './Popups';
+import { buildGuidance, buildRisk, type Risk } from './guidance.js';
+import { WORK_TYPES, type PanelInputs } from './share';
+import type { DepartmentData } from './departments';
+import { ResultSections } from './ResultSections';
+import { formatArea, overlapItems, readElevation, readNumber } from '../shared/format';
+import { OverlapLabel } from '../shared/OverlapLabel';
+import type { AnalysisResult, Elevation } from '../shared/types';
 
-export interface GuidanceOptions {
+export interface ResultOptions {
     title?: string;
     areaLabel?: string;
     back?: boolean; // 도면 사업부지 전체로 돌아가는 버튼
@@ -69,9 +69,9 @@ function OverlapList({ data, areaName }: { data: AnalysisResult; areaName: strin
     );
 }
 
-export function GuidancePanel({ data, options, inputs, onInputsChange, shareUrl, departments, siteTable, onBack }: {
+export function ResultPanel({ data, options, inputs, onInputsChange, shareUrl, departments, siteTable, onBack }: {
     data: AnalysisResult;
-    options: GuidanceOptions;
+    options: ResultOptions;
     inputs: PanelInputs;
     onInputsChange: (inputs: PanelInputs) => void;
     shareUrl: string | null; // 링크 복사로 보낼 주소 (공유할 수 없는 결과면 null)
@@ -142,7 +142,7 @@ export function GuidancePanel({ data, options, inputs, onInputsChange, shareUrl,
                 <label>지반 해발 <input type="number" step="0.01" placeholder="예: 35.2" value={inputs.ground} onChange={set('ground')} /> m</label>
                 <label>굴착 깊이 <input type="number" min="0" step="0.1" placeholder="예: 3" value={inputs.depth} onChange={set('depth')} /> m</label>
             </div>
-            <GuidanceBody
+            <ResultSections
                 data={data}
                 guidance={guidance}
                 ground={readElevation(inputs.ground)}

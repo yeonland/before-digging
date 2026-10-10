@@ -1,7 +1,7 @@
 // 클릭한 위치가 포함된 국가유산 구역과 문화유적 분포 범위를 조회
 // - zones: VWorld 국가유산 지정/보호구역(lt_c_uo301)
 // - sites: 국가유산청 문화유적분포지도
-const { fetchSites, isPointInGeometry } = require('./_heritage-gis');
+const { fetchSites, isPointInGeometry } = require('./_lib/heritage-gis');
 
 async function fetchZones(lat, lng, apiKey, registeredDomain) {
     const params = new URLSearchParams({

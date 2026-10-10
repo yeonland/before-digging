@@ -3,7 +3,7 @@
 // - 진단 내용과 자료 출처는 _analyze.js 참고
 const { area } = require('@turf/area');
 const { feature } = require('@turf/helpers');
-const { fetchVworldFeatures, fetchAreaData, analyze, getBbox, roundArea } = require('./_analyze');
+const { fetchVworldFeatures, fetchAreaData, analyze, getBbox, roundArea } = require('./_lib/analyze');
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') {
