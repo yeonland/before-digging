@@ -6,14 +6,14 @@
 
 1. GitHub에서 새 저장소를 만듭니다.
 2. 이 폴더의 파일을 저장소 최상위에 올립니다.
-3. `index.html`과 `api` 폴더가 같은 단계에 있는지 확인합니다.
+3. `package.json`, `index.html`, `api` 폴더가 같은 단계에 있는지 확인합니다.
 
 ## 2. Vercel 연결하기
 
 1. https://vercel.com 에서 GitHub 계정으로 로그인합니다.
 2. `Add New` → `Project`를 선택합니다.
 3. 땅파기전 GitHub 저장소 옆의 `Import`를 누릅니다.
-4. Framework Preset은 `Other`를 선택합니다.
+4. Framework Preset은 `Vite`를 선택합니다. (`vercel.json`에도 `framework: vite`, 빌드 결과 폴더 `dist`가 적혀 있어 자동으로 맞춰집니다.)
 5. Root Directory는 기본값 `./`을 유지합니다.
 6. 아직 Deploy를 누르지 말고 Environment Variables를 엽니다.
 

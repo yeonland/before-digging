@@ -1,0 +1,516 @@
+body {
+    margin: 8px;
+    font-family: system-ui, -apple-system, "Malgun Gothic", sans-serif;
+}
+
+/* 지도를 담을 div는 반드시 높이(height)가 있어야 함! */
+#map {
+    width: 100%;
+    height: 480px;
+}
+
+/* 검색창: 화면이 좁으면 칸이 줄어듦 */
+#search-box {
+    position: relative;
+    z-index: 1000;
+    margin-bottom: 10px;
+}
+#search-box .search-row {
+    display: flex;
+    gap: 6px;
+    max-width: 420px;
+}
+#address-input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px;
+    font-size: 14px;
+}
+#search-btn {
+    padding: 8px 15px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* 도면(DXF) 올리기 버튼과 파일 칸 */
+#dxf-btn {
+    padding: 8px 10px;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+#dxf-input {
+    display: none;
+}
+
+/* 도면 사업부지: 설정 단계 선택 목록과 필지별 표 */
+.site-options {
+    list-style: none;
+    margin: 4px 0 8px 0;
+    padding: 0;
+}
+.site-options li {
+    margin-bottom: 4px;
+}
+.site-options label {
+    cursor: pointer;
+}
+.site-options .site-option-note {
+    color: #666;
+    font-size: 12px;
+}
+.site-run {
+    margin: 8px 0;
+    padding: 8px 14px;
+    font-size: 14px;
+    cursor: pointer;
+}
+.site-table-wrap {
+    overflow-x: auto;
+    margin: 6px 0 10px 0;
+}
+.site-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 12px;
+}
+.site-table th,
+.site-table td {
+    border: 1px solid #ddd;
+    padding: 4px 6px;
+    text-align: left;
+    vertical-align: top;
+}
+.site-table th {
+    background: #f4f6f8;
+    white-space: nowrap;
+}
+.site-table td.num {
+    text-align: right;
+    white-space: nowrap;
+}
+.site-table tbody tr {
+    cursor: pointer;
+}
+.site-table tbody tr:hover {
+    background: #eef3f8;
+}
+
+/* 팝업의 "해야 할 일 보기" 버튼 */
+.go-panel {
+    margin-top: 8px;
+    padding: 4px 10px;
+    border: 1px solid #1d72b8;
+    border-radius: 4px;
+    background: white;
+    color: #1d72b8;
+    font-size: 12px;
+    cursor: pointer;
+}
+.go-panel:hover {
+    background: #1d72b8;
+    color: white;
+}
+
+/* 휴대폰 화면 */
+@media (max-width: 600px) {
+    body {
+        margin: 0;
+    }
+    #map {
+        height: 60vh;
+    }
+    #search-box,
+    #result-panel,
+    #data-source {
+        margin-left: 8px !important;
+        margin-right: 8px !important;
+    }
+    #search-box {
+        margin-top: 8px !important;
+    }
+    #result-panel {
+        padding: 10px 12px;
+    }
+    #result-panel .inputs label {
+        width: 100%;
+    }
+    #result-panel .inputs input,
+    #result-panel .inputs select {
+        flex: 1;
+    }
+    /* 좁은 화면에서는 범례 글씨를 조금 줄임 */
+    .map-legend {
+        font-size: 11px;
+        line-height: 17px;
+    }
+}
+
+/* 지도 범례 */
+.map-legend {
+    background: white;
+    padding: 6px 10px;
+    font-size: 12px;
+    line-height: 20px;
+    border-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+.map-legend .legend-title {
+    display: block;
+    width: 100%;
+    margin-bottom: 2px;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-weight: bold;
+    text-align: left;
+    cursor: pointer;
+}
+.map-legend.is-collapsed .legend-items {
+    display: none;
+}
+.map-legend.is-collapsed .legend-title {
+    margin-bottom: 0;
+}
+.map-legend.is-collapsed .legend-arrow {
+    display: inline-block;
+    transform: rotate(-90deg);
+}
+
+/* 터치 화면에서는 두 손가락으로 확대·축소하므로 +/- 버튼 숨김 */
+@media (pointer: coarse) {
+    .leaflet-control-zoom {
+        display: none;
+    }
+}
+/* 줌이 낮아 안 보이는 레이어 안내 */
+.zoom-hint {
+    background: white;
+    padding: 6px 10px;
+    font-size: 13px;
+    border-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+/* 내 위치 버튼 */
+.locate-button {
+    font-size: 15px;
+    color: #333;
+}
+.locate-button:hover {
+    color: #1d72b8;
+}
+.locate-button.is-loading {
+    cursor: wait;
+}
+.locate-button svg {
+    vertical-align: middle;
+}
+.locate-spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #ccc;
+    border-top-color: #1d72b8;
+    border-radius: 50%;
+    vertical-align: middle;
+    animation: locate-spin 0.8s linear infinite;
+}
+@keyframes locate-spin {
+    to { transform: rotate(360deg); }
+}
+.map-legend .swatch {
+    display: inline-block;
+    width: 14px;
+    height: 12px;
+    margin-right: 6px;
+    vertical-align: middle;
+    box-sizing: border-box;
+}
+
+/* 주소 검색 결과 목록 */
+#search-results {
+    max-width: 420px;
+    margin: 6px 0 0 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+}
+#search-results li + li {
+    border-top: 1px solid #eee;
+}
+#search-results button {
+    display: block;
+    width: 100%;
+    padding: 8px 10px;
+    border: 0;
+    background: none;
+    text-align: left;
+    font-size: 13px;
+    cursor: pointer;
+}
+#search-results button:hover {
+    background: #f3f7fb;
+}
+#search-results button span {
+    display: block;
+    color: #666;
+    font-size: 12px;
+}
+#search-results .search-message {
+    padding: 8px 10px;
+    color: #666;
+    font-size: 13px;
+}
+
+/* 위험도 등급 */
+.risk-box {
+    margin: 10px 0 4px 0;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+}
+.risk-box.high { background: #fdecee; border-color: #f3b4bb; }
+.risk-box.caution { background: #fff6dd; border-color: #f0d58a; }
+.risk-box.low { background: #e9f6f3; border-color: #a9dbcf; }
+.risk-box.unknown { background: #f2f2f2; border-color: #ccc; }
+.risk-title {
+    font-size: 16px;
+    font-weight: bold;
+}
+.risk-box ul {
+    margin: 6px 0 0 0;
+    padding-left: 18px;
+}
+.risk-note {
+    margin: 6px 0 0 0;
+    font-size: 12px;
+    color: #666;
+}
+.risk-criteria {
+    margin-top: 6px;
+    font-size: 13px;
+}
+.risk-criteria summary {
+    cursor: pointer;
+    color: #1d72b8;
+}
+.risk-criteria table {
+    margin-top: 6px;
+    border-collapse: collapse;
+    width: 100%;
+}
+.risk-criteria th,
+.risk-criteria td {
+    padding: 4px 6px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    text-align: left;
+    vertical-align: top;
+}
+.risk-criteria th {
+    white-space: nowrap;
+}
+
+/* 데이터 출처 */
+#data-source {
+    margin: 0 0 10px 0;
+    font-size: 12px;
+    color: #666;
+}
+
+/* 진단 결과 패널 */
+#result-panel {
+    max-width: 720px;
+    margin: 0 0 12px 0;
+    padding: 12px 16px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+#result-panel h3 {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+}
+#result-panel h4 {
+    margin: 14px 0 6px 0;
+    font-size: 14px;
+}
+#result-panel .panel-sub {
+    margin: 0;
+    color: #666;
+    font-size: 13px;
+}
+#result-panel .inputs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin-top: 10px;
+    font-size: 13px;
+}
+#result-panel .inputs label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+#result-panel .inputs label[hidden] {
+    display: none;
+}
+#result-panel .inputs input,
+#result-panel .inputs select {
+    padding: 4px 6px;
+    font-size: 13px;
+}
+#result-panel .inputs input {
+    width: 100px;
+}
+.step {
+    margin: 6px 0;
+    padding: 8px 10px;
+    border-left: 4px solid #ccc;
+    background: #fafafa;
+}
+.step.required { border-left-color: #e63946; }
+.step.check { border-left-color: #e9a400; }
+.step.info { border-left-color: #2a9d8f; }
+.step.yes { border-left-color: #2a9d8f; }
+.step.no { border-left-color: #999; }
+.step.ask { border-left-color: #1d72b8; }
+.step-title {
+    font-weight: bold;
+}
+.law {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #666;
+}
+.law summary {
+    cursor: pointer;
+}
+#result-panel ul.notes {
+    margin: 0;
+    padding-left: 18px;
+}
+#result-panel ul.surveys li {
+    margin-bottom: 6px;
+}
+.survey-method {
+    display: inline-block;
+    padding: 0 6px;
+    margin-right: 4px;
+    border-radius: 3px;
+    background: #eef3f8;
+    color: #1d72b8;
+    font-size: 12px;
+}
+.survey-report {
+    color: #666;
+    font-size: 12px;
+}
+.step-items {
+    margin: 4px 0 0 0;
+    padding-left: 18px;
+}
+.survey-link {
+    font-size: 12px;
+    color: #1d72b8;
+    white-space: nowrap;
+}
+#result-panel .disclaimer {
+    margin: 14px 0 0 0;
+    font-size: 12px;
+    color: #666;
+}
+
+/* 결과 패널의 걸친 영역 전체 목록 */
+.overlap-list {
+    margin-top: 10px;
+    font-size: 13px;
+}
+.overlap-list summary {
+    cursor: pointer;
+}
+.more-link {
+    color: #1d72b8;
+    font-size: 12px;
+}
+
+/* 결과 공유: 링크 복사, PDF 저장 */
+.share-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 8px 0 4px 0;
+}
+.share-bar .go-panel {
+    margin-top: 0;
+}
+.share-status {
+    font-size: 12px;
+    color: #2a9d8f;
+}
+.share-link-input {
+    width: 100%;
+    margin-top: 4px;
+    padding: 4px;
+    font-size: 12px;
+}
+.print-only {
+    display: none;
+}
+
+/* 인쇄·PDF 저장: 지도와 버튼을 빼고 결과 패널만 */
+@media print {
+    body {
+        margin: 0;
+    }
+    #map,
+    #search-box,
+    .share-bar,
+    #result-panel .go-panel {
+        display: none !important;
+    }
+    #result-panel {
+        max-width: none;
+        margin: 0 !important;
+        padding: 0;
+        border: none;
+        font-size: 12px;
+    }
+    #result-panel .print-only {
+        display: block;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #333;
+        font-size: 12px;
+    }
+    .print-only .print-title {
+        font-size: 18px;
+        font-weight: bold;
+    }
+    .print-only .print-link {
+        word-break: break-all;
+    }
+    .site-table-wrap {
+        overflow: visible;
+    }
+    .risk-box,
+    .step,
+    .site-table tr {
+        break-inside: avoid;
+    }
+    /* 위험도·안내 색이 인쇄에서 빠지지 않게 */
+    .risk-box,
+    .step,
+    .survey-method {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    #data-source {
+        margin: 10px 0 0 0 !important;
+    }
+}

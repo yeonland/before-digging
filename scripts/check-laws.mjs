@@ -1,4 +1,4 @@
-// 서비스 안내(guidance.js)에 쓰는 법령이 개정됐는지 확인
+// 서비스 안내(src/lib/guidance.js)에 쓰는 법령이 개정됐는지 확인
 // - 법령 정보는 서울 리전의 /api/law-versions에서 받음 (법령 API가 해외 접속을 막아 GitHub에서 직접 못 부름)
 // - 법령일련번호(MST)가 바뀌면 개정된 것으로 보고 data/law-versions.json을 갱신
 // - 바뀐 내용은 GitHub 이슈 본문으로 쓸 수 있게 law-changes.md에 저장 (워크플로가 이슈 생성)
@@ -92,7 +92,7 @@ const lines = changed.map(([name, version]) => {
 });
 
 const body = [
-    '서비스 안내에 쓰는 법령이 개정됐어요. 조문이 바뀌었는지 확인하고, 필요하면 `guidance.js`와 `docs/기획서.md` 5장을 고쳐주세요.',
+    '서비스 안내에 쓰는 법령이 개정됐어요. 조문이 바뀌었는지 확인하고, 필요하면 `src/lib/guidance.js`와 `docs/기획서.md` 5장을 고쳐주세요.',
     '',
     ...lines,
     '',

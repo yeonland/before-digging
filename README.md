@@ -40,7 +40,7 @@
 ## 기술 구조
 
 ```
-브라우저 (index.html, Leaflet, guidance.js)
+브라우저 (React + TypeScript, Leaflet)
    │
    ├─ /api/parcel          필지 진단: 지적도 + 국가유산 구역 + 문화유적 + 조사구역, 겹친 면적·거리 계산
    ├─ /api/heritage        지적도에 없는 곳의 지점 진단
@@ -53,16 +53,24 @@
    Vercel 서버리스 함수 (서울 리전)
 ```
 
-- **화면**: HTML, CSS, JavaScript, [Leaflet](https://leafletjs.com/)
+- **화면**: [React](https://react.dev/) + TypeScript, [Vite](https://vite.dev/), 지도는 [Leaflet](https://leafletjs.com/)
+  - `src/components/`: 검색창, 결과 패널, 지도 팝업, 도면 사업부지 화면
+  - `src/map/createMap.ts`: 지도·레이어·범례·내 위치 버튼
 - **서버**: Vercel 서버리스 함수(Node.js). VWorld와 법령 API가 해외 접속을 막아서 서울 리전(`icn1`)에 고정
 - **도형 계산**: [Turf.js](https://turfjs.org/)
 - **자동화**: GitHub Actions (`.github/workflows/law-watch.yml`)
-- **안내 규칙**: 해야 할 일, 비용, 위험도 등급 규칙은 `guidance.js` 한 파일에 모음
+- **안내 규칙**: 해야 할 일, 비용, 위험도 등급 규칙은 `src/lib/guidance.js` 한 파일에 모음 (도면 읽기 규칙은 `src/lib/dxf-site.js`)
 
 ## 직접 실행하기
 
 ```bash
 npm install
+npm run dev             # 화면만 실행, /api는 배포된 서버(before-digging.vercel.app)로 보냄
+```
+
+API까지 내 컴퓨터에서 돌리려면:
+
+```bash
 cp .env.example .env    # VWORLD_API_KEY, LAW_API_OC 입력
 npx vercel dev
 ```
@@ -78,6 +86,7 @@ npx vercel dev
 ## 업데이트 기록
 
 ### 2026-10-10
+- 화면을 React + TypeScript(Vite)로 전환: 2,000줄짜리 `index.html`을 컴포넌트로 나눔. 안내 규칙·도면 읽기 규칙과 `api/`는 그대로, 기능·화면도 전환 전과 같음. 도면 라이브러리는 CDN 대신 npm으로 넣고 쓸 때만 받음
 - 주변 시추공 참고값: 국토교통부 지반정보 시추공 32만 곳을 `data/boreholes.bin.gz`로 넣고, 결과 화면에 300m 안 가까운 5곳의 지반 고도와 "가장 가까운 시추공 고도 넣기" 버튼
 - 자료 자동 갱신 워크플로(`.github/workflows/data-update.yml`): 매달 시추공·조사기관 자료 갱신, 1월·7월 담당 부서 갱신 알림
 - 담당 부서 자료도 자동 갱신: 기관코드 사이트가 조회 화면의 쿠키와 Referer가 있어야 전체자료를 내줌을 확인, 스크립트가 직접 받아 zip을 풀어 처리 (1월·7월 알림 이슈는 없앰)

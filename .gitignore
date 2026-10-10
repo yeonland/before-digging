@@ -8,3 +8,4 @@ health-report.md
 data/*.zip
 data/*.txt
 data/*.csv
+dist
