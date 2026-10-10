@@ -382,8 +382,9 @@
     // ---------------------------------------------------------------
     const RISK = {
         nearbyDistance: NEARBY_CAUTION_DISTANCE, // 이 거리 안에 문화유적 분포 범위가 있으면 주의 (m)
-        excavationRadius: 200, // 이 반경 안의
-        excavationCount: 3 // 발굴·시굴조사가 이만큼 이상이면 주의
+        // 이 반경 안의 발굴·시굴조사는 등급에 넣지 않고 참고로만 안내 (2026-10-10 실무 의견:
+        // 서울 도심·경주 시내는 거의 다 걸려서 건수 기준이 변별력이 없음)
+        excavationRadius: 200
     };
 
     const RISK_LEVELS = {
@@ -413,7 +414,6 @@
                 '현상변경 허용기준의 개별검토·심의 구역에 걸침 (숫자 기준 없이 공사마다 검토)',
                 `문화유적 분포 범위가 ${RISK.nearbyDistance}m 안에 있음`,
                 '필지에 예전 발굴·시굴조사 기록이 있음',
-                `주변 ${RISK.excavationRadius}m 안에 발굴·시굴조사가 ${RISK.excavationCount}건 이상`,
                 '유적 범위가 필지 경계에만 살짝 걸침 (10㎡ 미만)'
             ]
         },
@@ -423,7 +423,10 @@
         },
         {
             level: 'note',
-            rules: ['천연기념물·명승 같은 자연유산 구역은 매장유산 절차와 별개라 등급에 넣지 않고 따로 안내함']
+            rules: [
+                '천연기념물·명승 같은 자연유산 구역은 매장유산 절차와 별개라 등급에 넣지 않고 따로 안내함',
+                `주변 ${RISK.excavationRadius}m 안의 발굴·시굴조사는 지역마다 건수 차이가 커서 등급에 넣지 않고, 있으면 참고로 안내함`
+            ]
         },
         {
             level: 'unknown',
@@ -468,7 +471,7 @@
             const followUps = surfaceSite.followUps || [];
             caution.push(`지표조사로 유적이 확인된 범위에 걸쳐요 ('${surfaceSite.name}')${followUps.length > 0 ? `. 그 뒤 같은 범위에 ${surveyLabel(followUps[0])}${followUps.length > 1 ? ` 외 ${followUps.length - 1}건의` : ''} 기록이 있어요` : ''}`);
         }
-        if (area.inHistoricEnv) caution.push('역사문화환경 보존지역에 걸쳐요');
+        if (area.inHistoricEnv) caution.push('역사문화환경 보존지역에 걸쳐요. 건물 높이·모양 같은 기준이 있을 수 있으니, 설계 전에 관할 시·군·구에 현상변경 허가 대상인지 확인해 보세요');
         if (area.inProtection) caution.push('국가유산 보호구역에 걸쳐요');
 
         const nearest = (result.nearbySites || [])[0];
@@ -483,10 +486,6 @@
             caution.push(`필지에 예전 발굴·시굴조사 기록이 ${pastExcavations.length}건 있어요${years.length ? ` (${first === last ? first : `${first}~${last}`}년)` : ''}`);
         }
 
-        const nearbyExcavations = result.surveyStats ? result.surveyStats.excavationsWithin200 : null;
-        if (nearbyExcavations !== null && nearbyExcavations >= RISK.excavationCount) {
-            caution.push(`주변 ${RISK.excavationRadius}m 안에서 발굴·시굴조사가 ${nearbyExcavations}건 있었어요`);
-        }
 
         if (area.edgeOnly) caution.push('유적 관련 범위가 필지 경계에만 살짝 걸쳐요 (도면 오차일 수 있음)');
 
@@ -500,6 +499,10 @@
         const reasons = [...high, ...caution];
         if (level === 'low') {
             reasons.push('주변 500m 안 자료를 확인했지만 위 기준에 해당하는 근거가 없어요');
+        }
+        const nearbyExcavations = result.surveyStats ? result.surveyStats.excavationsWithin200 : null;
+        if (nearbyExcavations > 0) {
+            reasons.push(`(참고) 주변 ${RISK.excavationRadius}m 안에서 발굴·시굴조사가 ${nearbyExcavations}건 있었어요. 등급에는 넣지 않았으니, 아래 "주변 조사 이력"에서 어떤 유적이 나왔는지 확인해 보세요`);
         }
         if (area.naturalNames.length > 0) {
             reasons.push(`(참고) 자연유산 구역에 걸쳐요 ('${area.naturalNames.join("', '")}'). 등급에는 넣지 않았어요`);
