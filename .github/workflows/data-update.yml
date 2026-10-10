@@ -31,6 +31,21 @@ jobs:
         continue-on-error: true
         run: node scripts/update-boreholes.mjs
 
+      # 한국문화유산협회 사이트가 중간 인증서를 빼고 보내서 리눅스에서는 접속이 거부됨 (윈도우는 알아서 받아 옴)
+      # 인증서에 적힌 주소(AIA)에서 빠진 중간 인증서를 받아, 시스템이 믿는 루트로 이어지는지 확인한 뒤에만 씀
+      - name: 협회 사이트 중간 인증서 보완
+        continue-on-error: true
+        run: |
+          set -e
+          cd "$RUNNER_TEMP"
+          aia() { openssl x509 -in "$1" -noout -ext authorityInfoAccess | tr -d '\r' | sed -n 's/.*CA Issuers - URI:\(.*\)/\1/p'; }
+          echo | openssl s_client -connect www.kaah.kr:443 -servername www.kaah.kr 2>/dev/null > leaf.txt
+          curl -sf -o inter.der "$(aia leaf.txt)" && openssl x509 -inform der -in inter.der -out inter.pem
+          curl -sf -o parent.der "$(aia inter.pem)" && openssl x509 -inform der -in parent.der -out parent.pem
+          openssl verify -CAfile /etc/ssl/certs/ca-certificates.crt -untrusted parent.pem inter.pem
+          cat inter.pem parent.pem > kaah-chain.pem
+          echo "NODE_EXTRA_CA_CERTS=$RUNNER_TEMP/kaah-chain.pem" >> "$GITHUB_ENV"
+
       - name: 조사기관 연락처 갱신
         id: agencies
         continue-on-error: true
@@ -58,6 +73,15 @@ jobs:
             --body "$(printf '시추공: %s\n조사기관 연락처: %s\n\n실행 기록: %s\n\n해외 접속을 막는 사이트면, 파일을 직접 받아 `node scripts/update-boreholes.mjs 파일.csv`로 갱신해 주세요.' \
               '${{ steps.boreholes.outcome }}' '${{ steps.agencies.outcome }}' \
               '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}')"
+
+      - name: 모두 성공하면 이전 실패 이슈 닫기
+        if: steps.boreholes.outcome == 'success' && steps.agencies.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue list --state open --search "자료 자동 갱신 실패 in:title" --json number --jq '.[].number' | while read -r issue; do
+            gh issue close "$issue" --comment "다시 실행해서 모두 성공했어요."
+          done
 
       - name: 담당 부서 자료 갱신 알림 (1월·7월)
         if: github.event_name == 'schedule'
