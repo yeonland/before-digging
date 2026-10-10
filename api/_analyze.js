@@ -123,7 +123,8 @@ async function fetchVworldPage(data, geomFilter, apiKey, registeredDomain, page,
     }
 
     if (!response.ok || status !== 'OK') {
-        throw new Error(`VWorld 데이터 응답 오류(${data}): ${response.status} ${status}`);
+        const error = (body.response && body.response.error) || {};
+        throw new Error(`VWorld 데이터 응답 오류(${data}): ${response.status} ${status} ${error.code || ''} ${error.text || ''}`.trim());
     }
 
     return {

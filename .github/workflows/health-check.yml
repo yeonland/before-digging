@@ -1,0 +1,65 @@
+# 외부 데이터 장애 확인: 매일 오전 8시(한국 시간)에 서비스가 쓰는 공공데이터를 불러 보고,
+# 장애가 있으면 이슈를 만들고(이미 열려 있으면 댓글), 모두 정상으로 돌아오면 그 이슈를 닫는다
+name: 외부 데이터 장애 확인
+
+on:
+  schedule:
+    - cron: '0 23 * * *'
+  workflow_dispatch:
+  # 점검 코드나 이 설정을 고쳐서 올리면 바로 한 번 실행해서 동작을 확인
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/check-health.mjs'
+      - 'api/health.js'
+      - '.github/workflows/health-check.yml'
+
+permissions:
+  issues: write
+
+env:
+  ISSUE_LABEL: 데이터 장애
+
+jobs:
+  check-health:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '22'
+
+      # VWorld·국가유산청이 해외 접속을 막을 때가 있어, 서울 리전 Vercel 함수(/api/health)를 거쳐 확인
+      - name: 외부 데이터 확인
+        id: health
+        run: node scripts/check-health.mjs
+
+      - name: 장애 이슈 라벨 준비
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh label create "$ISSUE_LABEL" --color d73a4a --description "외부 데이터 장애 자동 점검" --force
+
+      - name: 장애 이슈 만들기 또는 댓글 달기
+        if: steps.health.outputs.failed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          issue=$(gh issue list --label "$ISSUE_LABEL" --state open --json number --jq '.[0].number')
+          if [ -n "$issue" ]; then
+            gh issue comment "$issue" --body-file health-report.md
+          else
+            gh issue create \
+              --title "🚨 외부 데이터 장애 ($(TZ=Asia/Seoul date +%Y-%m-%d))" \
+              --label "$ISSUE_LABEL" \
+              --body-file health-report.md
+          fi
+
+      - name: 복구되면 장애 이슈 닫기
+        if: steps.health.outputs.failed == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue list --label "$ISSUE_LABEL" --state open --json number --jq '.[].number' | while read -r issue; do
+            gh issue close "$issue" --comment "$(printf '모두 정상으로 돌아왔어요.\n\n'; cat health-report.md)"
+          done
