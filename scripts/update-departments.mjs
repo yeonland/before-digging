@@ -3,23 +3,79 @@
 // - 기관코드 자료에는 팀 단위와 부서 전화번호가 거의 없어서 과(課) 이름만 씀
 // - 이름에 문화유산·국가유산·문화재가 들어간 과가 있으면 확실(sure), 없으면 이름에 '문화'가 들어간 과를 추정으로 둠
 //
-// 자료 받기: https://www.code.go.kr → 코드검색 → 기관코드검색 → "기관코드 전체자료" (zip, 압축을 풀면 txt)
-// 사용: node scripts/update-departments.mjs "기관코드 전체자료.txt" [자료 기준일 YYYY-MM-DD]
+// 자료: https://www.code.go.kr → 코드검색 → 기관코드검색 → "기관코드 전체자료" (zip 안에 txt)
+// 사용: node scripts/update-departments.mjs                       → 사이트에서 바로 받아서
+//       node scripts/update-departments.mjs "기관코드 전체자료.zip"  → 받아 둔 zip이나 압축을 푼 txt로
+// 부서 목록이 그대로면 파일을 건드리지 않음 (매달 자동 갱신 때 날짜만 바뀌는 커밋이 생기지 않게)
 import { readFile, writeFile } from 'node:fs/promises';
+import { inflateRawSync } from 'node:zlib';
 
-const [inputPath, baseDate = new Date().toISOString().slice(0, 10)] = process.argv.slice(2);
-if (!inputPath) {
-    console.error('사용: node scripts/update-departments.mjs "기관코드 전체자료.txt" [자료 기준일]');
-    process.exit(1);
-}
+const SITE = 'https://www.code.go.kr';
 const OUTPUT_FILE = new URL('../data/departments.json', import.meta.url);
+const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10); // 한국 날짜
+
+// 전체자료 내려받기: 조회 화면에서 받은 쿠키(세션)와 Referer가 있어야 파일을 줌 (없으면 "파일이 없습니다")
+async function download() {
+    const page = await fetch(`${SITE}/stdcode/orgCodeL.do`);
+    const cookie = page.headers.getSetCookie().map((item) => item.split(';')[0]).join('; ');
+    const response = await fetch(`${SITE}/etc/codeFullDown.do`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Cookie: cookie,
+            Referer: `${SITE}/stdcode/orgCodeL.do`
+        },
+        body: 'codeseId=00001'
+    });
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (!response.ok || buffer.subarray(0, 2).toString() !== 'PK') {
+        throw new Error(`기관코드 전체자료를 받지 못했어요 (${response.status}, ${buffer.length}바이트). 사이트 내려받기 방식이 바뀌었는지 확인하세요.`);
+    }
+    return buffer;
+}
+
+// zip 안의 파일들 { 이름, 내용 } (zip 끝의 목록을 읽어 압축을 풂)
+function unzip(buffer) {
+    const end = buffer.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+    const count = buffer.readUInt16LE(end + 10);
+    let offset = buffer.readUInt32LE(end + 16);
+    const files = [];
+    for (let i = 0; i < count; i++) {
+        const method = buffer.readUInt16LE(offset + 10);
+        const size = buffer.readUInt32LE(offset + 20);
+        const nameLength = buffer.readUInt16LE(offset + 28);
+        const extraLength = buffer.readUInt16LE(offset + 30);
+        const commentLength = buffer.readUInt16LE(offset + 32);
+        const local = buffer.readUInt32LE(offset + 42);
+        const name = new TextDecoder('euc-kr').decode(buffer.subarray(offset + 46, offset + 46 + nameLength));
+        const dataStart = local + 30 + buffer.readUInt16LE(local + 26) + buffer.readUInt16LE(local + 28);
+        const raw = buffer.subarray(dataStart, dataStart + size);
+        files.push({ name, data: method === 8 ? inflateRawSync(raw) : raw });
+        offset += 46 + nameLength + extraLength + commentLength;
+    }
+    return files;
+}
+
+// zip에는 "기관코드 전체자료.txt"와 유형분류를 더한 판이 같이 들어 있음 → 기본 판을 씀
+function pickText(files) {
+    const texts = files.filter((file) => /\.txt$/i.test(file.name));
+    const file = texts.find((item) => !/\(/.test(item.name)) || texts[0];
+    if (!file) throw new Error('zip 안에 txt 파일이 없어요.');
+    return file.data;
+}
+
+const inputPath = process.argv[2];
+let raw;
+if (!inputPath) raw = pickText(unzip(await download()));
+else if (/\.zip$/i.test(inputPath)) raw = pickText(unzip(await readFile(inputPath)));
+else raw = await readFile(inputPath);
 
 const HERITAGE = /국가유산|문화유산|문화재|유산/;
 // 담당 부서가 아닌 기관(재단, 박물관 등)과 다른 업무 부서는 뺌
 const NOT_DEPARTMENT = /재단|센터|박물관|도서관|미술관|기념관|위원|보건|교육|의회|사업소|본부$|해녀/;
 
 // 기관코드 자료는 CP949(EUC-KR) 탭 구분 글자 파일
-const text = new TextDecoder('euc-kr').decode(await readFile(inputPath));
+const text = new TextDecoder('euc-kr').decode(raw);
 const lines = text.split(/\r?\n/);
 const header = lines[0].split('\t');
 const col = (name) => {
@@ -66,9 +122,16 @@ for (const district of districts) {
     }
 }
 
+const summary = `시·군·구 ${districts.length}곳 중 확실 ${sureCount}곳, 추정 ${guessCount}곳, 못 찾음 ${districts.length - sureCount - guessCount}곳`;
+const previous = await readFile(OUTPUT_FILE, 'utf8').then(JSON.parse).catch(() => null);
+if (previous && JSON.stringify(previous.districts) === JSON.stringify(result)) {
+    console.log(`담당 부서 목록이 바뀌지 않았어요. (${summary})`);
+    process.exit(0);
+}
+
 await writeFile(OUTPUT_FILE, JSON.stringify({
     source: '행정안전부 행정표준코드관리시스템 기관코드 전체자료 (www.code.go.kr)',
-    baseDate,
+    baseDate: today,
     districts: result
 }, null, 1) + '\n');
 
