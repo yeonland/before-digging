@@ -9,6 +9,10 @@ const note12 = { margin: '6px 0 0 0', fontSize: 12, color: '#666' };
 const listStyle = { margin: '5px 0 0 0', paddingLeft: 18, fontSize: 13 };
 const titleStyle = (color: string) => ({ margin: '0 0 5px 0', color });
 
+function FailNote() {
+    return <p style={{ ...note12, margin: '5px 0 0 0' }}>※ 일부 데이터를 불러오지 못해 결과가 불완전할 수 있습니다.</p>;
+}
+
 // 팝업이 지도를 너무 가리지 않게 많이 겹친 3개만 보여주고, 나머지는 결과 패널의 전체 목록으로 보냄
 const POPUP_ITEM_LIMIT = 3;
 
@@ -77,7 +81,7 @@ export function ParcelPopup({ data, onShowPanel, onShowOverlaps }: {
             {surveyCount > 0 && (
                 <p style={{ ...note12, margin: '2px 0 0 0' }}>주변 500m 조사 이력 {surveyCount}건{surveyCount >= 10 ? ' 이상' : ''}</p>
             )}
-            {failed && <p style={{ ...note12, margin: '5px 0 0 0' }}>※ 일부 데이터를 불러오지 못해 결과가 불완전할 수 있습니다.</p>}
+            {failed && <FailNote />}
             <button type="button" className="go-panel" onClick={onShowPanel}>해야 할 일 보기 ▼</button>
         </div>
     );
@@ -104,7 +108,7 @@ export function PointPopup({ data }: { data: PointResult }) {
                         <li key={`s${index}`}>{site.name || '이름 없음'} <span style={{ color: '#666' }}>(문화유적 분포 범위)</span></li>
                     ))}
                 </ul>
-                {failed && <p style={{ ...note12, margin: '5px 0 0 0' }}>※ 일부 데이터를 불러오지 못해 결과가 불완전할 수 있습니다.</p>}
+                {failed && <FailNote />}
             </div>
         );
     }

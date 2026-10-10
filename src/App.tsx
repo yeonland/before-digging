@@ -12,7 +12,8 @@ import { loadDepartments, type DepartmentData } from './result/departments';
 import { buildShareUrl, readSharedLink, type LatLng, type PanelInputs, type SharedLink } from './result/share';
 import { SiteSetup, SiteTable, type SiteDraft } from './site/SitePanels';
 import { loadDxfSite } from './site/loadDxfSite';
-import type { AnalysisResult, PointResult, SearchResult, SiteResponse } from './shared/types';
+import { fetchAddresses, getJson } from './shared/api';
+import type { AnalysisResult, PointResult, SiteResponse } from './shared/types';
 
 type Panel =
     | { kind: 'message'; text: string } // 도면 사업부지 진행 안내
@@ -71,7 +72,7 @@ export default function App() {
     }
 
     // 한 지점의 필지를 진단 (지도 클릭, 주소 검색, 공유 링크에서 사용)
-    function diagnose(latlng: LatLng) {
+    async function diagnose(latlng: LatLng) {
         const controller = mapRef.current!;
         // 응답이 늦게 와도 이 클릭의 핀에만 결과를 넣도록 지역 변수로 보관
         const marker = controller.placeMarker(latlng);
@@ -79,44 +80,40 @@ export default function App() {
         setShareLocation(latlng);
 
         const query = `lat=${latlng.lat}&lng=${latlng.lng}`;
-
-        // 필지 단위로 진단하고, 지적도에 없는 곳이면 클릭 지점만 진단
-        fetch(`/api/parcel?${query}`)
-            .then(response => {
-                if (!response.ok) throw new Error('필지 진단 실패');
-                return response.json();
-            })
-            .then((data: AnalysisResult | { parcel: null }) => {
-                if (!controller.isActiveMarker(marker)) return; // 그사이 다른 곳을 눌렀으면 무시
-                if (data.parcel) {
-                    const result = data as AnalysisResult;
-                    controller.highlightParcel(result.parcel.geometry);
-                    setPopupContent(marker, (
-                        <ParcelPopup data={result} onShowPanel={() => scrollTo('result-panel')} onShowOverlaps={() => scrollTo('overlap-list')} />
-                    ));
-                    showResultPanel(result, {}, latlng);
-                    return;
-                }
-                setPanel(null);
-                return fetch(`/api/heritage?${query}`)
-                    .then(response => {
-                        if (!response.ok) throw new Error('국가유산 구역 조회 실패');
-                        return response.json();
-                    })
-                    .then((pointData: PointResult) => setPopupContent(marker, <PointPopup data={pointData} />));
-            })
-            .catch(error => {
-                console.error('진단 오류:', error);
-                marker.setPopupContent('국가유산 데이터를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
-            });
+        try {
+            // 필지 단위로 진단하고, 지적도에 없는 곳이면 클릭 지점만 진단
+            const data = await getJson<AnalysisResult | { parcel: null }>(`/api/parcel?${query}`);
+            if (!controller.isActiveMarker(marker)) return; // 그사이 다른 곳을 눌렀으면 무시
+            if (data.parcel) {
+                const result = data as AnalysisResult;
+                controller.highlightParcel(result.parcel.geometry);
+                setPopupContent(marker, (
+                    <ParcelPopup data={result} onShowPanel={() => scrollTo('result-panel')} onShowOverlaps={() => scrollTo('overlap-list')} />
+                ));
+                showResultPanel(result, {}, latlng);
+                return;
+            }
+            setPanel(null);
+            const pointData = await getJson<PointResult>(`/api/heritage?${query}`);
+            setPopupContent(marker, <PointPopup data={pointData} />);
+        } catch (error) {
+            console.error('진단 오류:', error);
+            marker.setPopupContent('국가유산 데이터를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+        }
     }
 
-    // 지도 클릭은 지도를 만들 때 한 번만 연결하므로, 항상 최신 diagnose를 부르도록 ref로 넘김
-    const diagnoseRef = useRef(diagnose);
-    diagnoseRef.current = diagnose;
+    // 지도를 그 위치로 옮기고 진단 (주소 검색, 공유 링크)
+    function diagnoseAt(latlng: LatLng) {
+        mapRef.current!.map.setView([latlng.lat, latlng.lng], 18);
+        diagnose(latlng);
+    }
+
+    // 지도 클릭과 공유 링크는 지도를 만들 때 한 번만 연결하므로, 항상 최신 함수를 부르도록 ref로 넘김
+    const latest = useRef({ diagnose, diagnoseAt });
+    latest.current = { diagnose, diagnoseAt };
 
     useEffect(() => {
-        const controller = createMap(mapElement.current!, latlng => diagnoseRef.current(latlng));
+        const controller = createMap(mapElement.current!, latlng => latest.current.diagnose(latlng));
         mapRef.current = controller;
         loadDepartments().then(setDepartments);
 
@@ -124,20 +121,13 @@ export default function App() {
         const shared = readSharedLink(window.location.search);
         if (shared) {
             sharedInputs.current = shared;
-            controller.map.setView([shared.location.lat, shared.location.lng], 18);
-            diagnoseRef.current(shared.location);
+            latest.current.diagnoseAt(shared.location);
         }
         return () => {
             controller.map.remove();
             mapRef.current = null;
         };
     }, []);
-
-    function goToResult(result: SearchResult) {
-        const latlng = { lat: result.lat, lng: result.lng };
-        mapRef.current!.map.setView([latlng.lat, latlng.lng], 18);
-        diagnose(latlng);
-    }
 
     // ---------------------------------------------------------------
     // 도면(DXF)으로 사업부지 진단: 파일 고르기 → 경계 레이어·좌표계 고르기 → 부지 전체 + 필지별 진단
@@ -171,12 +161,7 @@ export default function App() {
 
         const dxf = await loadDxfSite();
         const candidates = dxf.crsCandidates(next.layers[next.layerIndex]);
-        let addresses: (string | null)[] = [];
-        if (candidates.length > 0) {
-            const points = candidates.map(item => item.center.join(',')).join('|');
-            const response = await fetch(`/api/site?points=${encodeURIComponent(points)}`);
-            addresses = response.ok ? (await response.json()).addresses : [];
-        }
+        const addresses = await fetchAddresses(candidates.map(item => item.center));
         if (next !== siteDraft.current) return; // 그사이 다른 파일이나 레이어를 골랐으면 무시
 
         // 지적도에 없는 곳(바다·국외)으로 떨어지는 후보는 뺌
@@ -362,7 +347,7 @@ export default function App() {
     return (
         <>
             <div id="map" ref={mapElement} />
-            <SearchBox onGo={goToResult} onDxfFile={handleDxfFile} />
+            <SearchBox onGo={result => diagnoseAt({ lat: result.lat, lng: result.lng })} onDxfFile={handleDxfFile} />
             {/* 진단 결과 패널: 필지를 누르면 해야 할 일과 비용 안내 표시 */}
             <section id="result-panel" ref={panelElement} hidden={!panel}>{panelContent}</section>
             <p id="data-source">

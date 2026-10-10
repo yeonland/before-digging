@@ -1,5 +1,7 @@
 // 주소·장소 검색 (VWorld 검색 API)
 // 지번·도로명 주소를 먼저 찾고, 없으면 장소 이름으로 찾음
+const { allowMethods, vworldAuth } = require('./_lib/http');
+
 const MAX_RESULTS = 5;
 
 async function searchVworld(query, type, category, apiKey, registeredDomain) {
@@ -53,18 +55,10 @@ async function searchVworld(query, type, category, apiKey, registeredDomain) {
 }
 
 module.exports = async function handler(req, res) {
-    if (req.method !== 'GET') {
-        res.setHeader('Allow', 'GET');
-        return res.status(405).json({ message: 'GET 요청만 사용할 수 있습니다.' });
-    }
-
-    const apiKey = process.env.VWORLD_API_KEY;
-    const registeredDomain =
-        process.env.VWORLD_DOMAIN || `https://${req.headers.host}`;
-
-    if (!apiKey) {
-        return res.status(500).json({ message: 'VWorld API 키가 설정되지 않았습니다.' });
-    }
+    if (!allowMethods(req, res)) return;
+    const auth = vworldAuth(req, res);
+    if (!auth) return;
+    const { apiKey, registeredDomain } = auth;
 
     const query = String(req.query.query || '').trim();
 

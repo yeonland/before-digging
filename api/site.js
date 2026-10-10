@@ -14,15 +14,12 @@ const {
     getOverlap,
     roundArea
 } = require('./_lib/analyze');
+const { allowMethods, vworldAuth, inKorea } = require('./_lib/http');
 
 // 너무 넓은 부지는 외부 자료 요청이 많아져 거절 (서비스 기준)
 const MAX_SITE_AREA = 2000000; // 2㎢
 const MAX_PARCELS = 300;
 const MAX_POINTS = 30; // 좌표계 13개 × 두 가지 좌표 순서
-
-function inKorea([lng, lat]) {
-    return Number.isFinite(lng) && Number.isFinite(lat) && lat >= 33 && lat <= 39 && lng >= 124 && lng <= 132;
-}
 
 function isValidGeometry(geometry) {
     if (!geometry || !['Polygon', 'MultiPolygon'].includes(geometry.type) || !Array.isArray(geometry.coordinates)) {
@@ -31,7 +28,7 @@ function isValidGeometry(geometry) {
     const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates;
     return polygons.length > 0 && polygons.every((rings) =>
         Array.isArray(rings) && rings.length > 0 && rings.every((ring) =>
-            Array.isArray(ring) && ring.length >= 4 && ring.every((point) => Array.isArray(point) && inKorea(point))
+            Array.isArray(ring) && ring.length >= 4 && ring.every((point) => Array.isArray(point) && inKorea(point[0], point[1]))
         )
     );
 }
@@ -45,7 +42,7 @@ async function locate(req, res, apiKey, registeredDomain) {
         .map((text) => text.split(',').map(Number));
 
     const results = await Promise.all(points.map(async (point) => {
-        if (!inKorea(point)) return null;
+        if (!inKorea(point[0], point[1])) return null;
         try {
             const parcels = await fetchVworldFeatures('LP_PA_CBND_BUBUN', `POINT(${point[0]} ${point[1]})`, apiKey, registeredDomain);
             return parcels[0] ? parcels[0].properties.addr : null;
@@ -59,21 +56,13 @@ async function locate(req, res, apiKey, registeredDomain) {
 }
 
 module.exports = async function handler(req, res) {
-    const apiKey = process.env.VWORLD_API_KEY;
-    const registeredDomain =
-        process.env.VWORLD_DOMAIN || `https://${req.headers.host}`;
-
-    if (!apiKey) {
-        return res.status(500).json({ message: 'VWorld API 키가 설정되지 않았습니다.' });
-    }
+    if (!allowMethods(req, res, ['GET', 'POST'])) return;
+    const auth = vworldAuth(req, res);
+    if (!auth) return;
+    const { apiKey, registeredDomain } = auth;
 
     if (req.method === 'GET') {
         return locate(req, res, apiKey, registeredDomain);
-    }
-
-    if (req.method !== 'POST') {
-        res.setHeader('Allow', 'GET, POST');
-        return res.status(405).json({ message: 'GET 또는 POST 요청만 사용할 수 있습니다.' });
     }
 
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});

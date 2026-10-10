@@ -11,6 +11,7 @@ const {
     fetchAllowanceCriteria,
     fetchWorldHeritage
 } = require('./_lib/heritage-gis');
+const { allowMethods, vworldAuth } = require('./_lib/http');
 
 const TIMEOUT_MS = 20000;
 
@@ -113,13 +114,10 @@ function withTimeout(promise) {
 }
 
 module.exports = async function handler(req, res) {
-    if (req.method !== 'GET') {
-        res.setHeader('Allow', 'GET');
-        return res.status(405).json({ message: 'GET 요청만 사용할 수 있습니다.' });
-    }
-
-    const apiKey = process.env.VWORLD_API_KEY;
-    const domain = process.env.VWORLD_DOMAIN || `https://${req.headers.host}`;
+    if (!allowMethods(req, res)) return;
+    const auth = vworldAuth(req, res);
+    if (!auth) return;
+    const { apiKey, registeredDomain: domain } = auth;
     const point = ({ lat, lng }) => `POINT(${lng} ${lat})`;
 
     const checks = [
@@ -157,10 +155,6 @@ module.exports = async function handler(req, res) {
             run: async () => expectSome(await fetchWorldHeritage(bboxAround(JONGMYO, 0.001), 10), '세계유산 구역')
         }
     ];
-
-    if (!apiKey) {
-        return res.status(500).json({ message: 'VWorld API 키가 설정되지 않았습니다.' });
-    }
 
     const results = await Promise.all(
         checks.map(async ({ id, name, run }) => {

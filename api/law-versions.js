@@ -2,6 +2,7 @@
 // 국가법령정보 공동활용 오픈API가 해외 접속을 막아 GitHub Actions에서 직접 부를 수 없으므로,
 // 서울 리전의 이 함수가 대신 조회한다. (scripts/check-laws.mjs가 사용)
 const WATCHED = require('../data/watched-laws.json');
+const { allowMethods } = require('./_lib/http');
 
 // 오픈API 신청 때 등록한 도메인. API가 요청의 Referer로 사용자를 검증함
 const REGISTERED_DOMAIN = 'https://before-digging.vercel.app/';
@@ -28,10 +29,7 @@ async function searchLaws(query, oc) {
 }
 
 module.exports = async function handler(req, res) {
-    if (req.method !== 'GET') {
-        res.setHeader('Allow', 'GET');
-        return res.status(405).json({ message: 'GET 요청만 사용할 수 있습니다.' });
-    }
+    if (!allowMethods(req, res)) return;
 
     const oc = process.env.LAW_API_OC;
 

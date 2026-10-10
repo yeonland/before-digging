@@ -3,6 +3,7 @@
 // - DXF에는 좌표계 정보가 없어서, 후보 좌표계마다 위치를 계산해 사용자가 고르게 함
 import DxfParser from 'dxf-parser';
 import proj4 from 'proj4';
+import { inKorea } from '../shared/api';
 
 // 우리나라 측량 도면에 쓰는 좌표계 (EPSG 번호, 이름, proj4 정의)
 // 같은 숫자 좌표라도 원점(기준 경도)에 따라 수백 km 떨어진 곳이 되므로 모두 후보로 계산
@@ -28,10 +29,6 @@ const MM_THRESHOLD = 5000000;
 
 // 닫힌 선으로 볼 때 처음과 끝 점의 허용 거리 (도면 단위)
 const CLOSE_TOLERANCE = 0.01;
-
-function inKorea([lng, lat]) {
-    return lat >= 33 && lat <= 39 && lng >= 124 && lng <= 132;
-}
 
 // 파일 내용을 글자로: 2007 이후 DXF는 UTF-8, 그 전 한글 도면은 EUC-KR(코드페이지 949)
 function decodeDxf(buffer) {
@@ -202,7 +199,7 @@ function crsCandidates(layer) {
     return CRS_LIST
         .filter((crs) => /longlat/.test(crs.def) === degrees)
         .map((crs) => ({ ...crs, center: proj4(crs.def, 'EPSG:4326', layerCenter(layer, scaleFor(crs, layer))) }))
-        .filter((crs) => inKorea(crs.center));
+        .filter((crs) => inKorea(...crs.center));
 }
 
 // 좌표 숫자 두 개가 좌표계마다 어디인지 (검색창 좌표 입력용)
@@ -214,7 +211,7 @@ function pointCandidates(first, second) {
     CRS_LIST.filter((crs) => /longlat/.test(crs.def) === degrees).forEach((crs) => {
         [[first, second, false], [second, first, true]].forEach(([x, y, swapped]) => {
             const center = proj4(crs.def, 'EPSG:4326', [x, y]);
-            if (!inKorea(center)) return;
+            if (!inKorea(...center)) return;
             // 거의 같은 곳(약 1m 안)이 이미 있으면 하나만 (예: 같은 숫자를 두 순서로 넣었을 때)
             if (found.some((item) => Math.hypot(item.center[0] - center[0], item.center[1] - center[1]) < 0.00001)) return;
             found.push({ ...crs, center, swapped });

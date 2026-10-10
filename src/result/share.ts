@@ -1,5 +1,6 @@
 // 결과 공유 링크: 진단한 위치(+ 공사 종류·면적·해발 입력)를 주소창에 담음
 // 결과를 저장하지 않고, 링크를 열 때 그 시점 데이터로 다시 진단
+import { inKorea } from '../shared/api';
 import { readElevation, readNumber } from '../shared/format';
 
 export interface LatLng {
@@ -63,8 +64,7 @@ export function readSharedLink(search: string): SharedLink | null {
     const params = new URLSearchParams(search);
     const lat = Number(params.get('lat'));
     const lng = Number(params.get('lng'));
-    if (!params.has('lat') || !params.has('lng') || !Number.isFinite(lat) || !Number.isFinite(lng) ||
-        lat < 33 || lat > 39 || lng < 124 || lng > 132) return null;
+    if (!params.has('lat') || !params.has('lng') || !inKorea(lng, lat)) return null;
 
     const number = (name: string) => {
         const value = Number(params.get(name));

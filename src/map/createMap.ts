@@ -6,6 +6,7 @@ import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import type { RiskLevel } from '../result/guidance.js';
+import { getJson } from '../shared/api';
 
 // 번들러에서는 Leaflet 기본 핀 그림을 직접 넣어야 함 (기본 핀은 CSS에서 찾은 경로를 앞에 붙여서 깨짐)
 L.Marker.prototype.options.icon = L.icon({
@@ -127,12 +128,8 @@ export function createMap(element: HTMLElement, onClick: (latlng: L.LatLng) => v
                     if (loadedTiles.has(tileKey)) continue;
                     loadedTiles.add(tileKey);
 
-                    fetch(`/api/heritage-sites?x=${x}&y=${y}${query}`)
-                        .then(response => {
-                            if (!response.ok) throw new Error(`${label} 조회 실패`);
-                            return response.json();
-                        })
-                        .then((data: { features: Feature[] }) => {
+                    getJson<{ features: Feature[] }>(`/api/heritage-sites?x=${x}&y=${y}${query}`)
+                        .then(data => {
                             // 여러 칸에 걸친 도형은 한 번만 그림
                             const newFeatures = data.features.filter(feature => !loadedIds.has(feature.properties?.id));
                             newFeatures.forEach(feature => loadedIds.add(feature.properties?.id));
@@ -147,13 +144,15 @@ export function createMap(element: HTMLElement, onClick: (latlng: L.LatLng) => v
         };
     }
 
-    const loadSites = createTileLoader(sitesLayer, '', '문화유적분포지도');
-    const loadAllowance = createTileLoader(allowanceLayer, '&layer=allowance', '현상변경 허용기준');
-    const loadWorld = createTileLoader(worldLayer, '&layer=world', '세계유산');
-    map.on('moveend overlayadd', loadSites);
-    map.on('moveend overlayadd', loadAllowance);
-    map.on('moveend overlayadd', loadWorld);
-    loadSites();
+    const loaders = [
+        createTileLoader(sitesLayer, '', '문화유적분포지도'),
+        createTileLoader(allowanceLayer, '&layer=allowance', '현상변경 허용기준'),
+        createTileLoader(worldLayer, '&layer=world', '세계유산')
+    ];
+    loaders.forEach(load => {
+        map.on('moveend overlayadd', load);
+        load(); // 꺼진 레이어는 load 안에서 건너뜀
+    });
 
     L.control.layers(undefined, {
         '지적도 표시': cadastralLayer,

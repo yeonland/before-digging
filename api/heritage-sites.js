@@ -3,6 +3,7 @@
 // - layer=allowance: 현상변경 허용기준 구역
 // - layer=world: 세계유산 구역·완충구역·세계유산지구
 const { fetchSites, fetchAllowanceZones, fetchWorldHeritage } = require('./_lib/heritage-gis');
+const { CACHE_ONE_DAY, allowMethods, inKorea } = require('./_lib/http');
 
 const LAYERS = {
     allowance: fetchAllowanceZones,
@@ -21,10 +22,7 @@ function tileToLat(y) {
 }
 
 module.exports = async function handler(req, res) {
-    if (req.method !== 'GET') {
-        res.setHeader('Allow', 'GET');
-        return res.status(405).json({ message: 'GET 요청만 사용할 수 있습니다.' });
-    }
+    if (!allowMethods(req, res)) return;
 
     const x = Number(req.query.x);
     const y = Number(req.query.y);
@@ -34,8 +32,8 @@ module.exports = async function handler(req, res) {
     if (
         !Number.isInteger(x) ||
         !Number.isInteger(y) ||
-        bbox[0] < 124 || bbox[2] > 132 ||
-        bbox[1] < 33 || bbox[3] > 39
+        !inKorea(bbox[0], bbox[1]) ||
+        !inKorea(bbox[2], bbox[3])
     ) {
         return res.status(400).json({ message: '잘못된 타일 좌표입니다.' });
     }
@@ -44,10 +42,7 @@ module.exports = async function handler(req, res) {
         const fetchFeatures = LAYERS[req.query.layer] || fetchSites;
         const features = await fetchFeatures(bbox, 1000);
 
-        res.setHeader(
-            'Cache-Control',
-            'public, s-maxage=86400, stale-while-revalidate=604800'
-        );
+        res.setHeader('Cache-Control', CACHE_ONE_DAY);
 
         return res.status(200).json({ type: 'FeatureCollection', features });
     } catch (error) {

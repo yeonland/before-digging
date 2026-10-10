@@ -1,36 +1,20 @@
 // 클릭한 위치의 필지를 찾아, 필지와 겹치는 국가유산 구역·문화유적 분포 범위 등을 진단
 // - parcel: VWorld 연속지적도(LP_PA_CBND_BUBUN)
-// - 진단 내용과 자료 출처는 _analyze.js 참고
+// - 진단 내용과 자료 출처는 _lib/analyze.js 참고
 const { area } = require('@turf/area');
 const { feature } = require('@turf/helpers');
 const { fetchVworldFeatures, fetchAreaData, analyze, getBbox, roundArea } = require('./_lib/analyze');
+const { CACHE_ONE_DAY, allowMethods, vworldAuth, inKorea } = require('./_lib/http');
 
 module.exports = async function handler(req, res) {
-    if (req.method !== 'GET') {
-        res.setHeader('Allow', 'GET');
-        return res.status(405).json({ message: 'GET 요청만 사용할 수 있습니다.' });
-    }
-
-    const apiKey = process.env.VWORLD_API_KEY;
-    const registeredDomain =
-        process.env.VWORLD_DOMAIN || `https://${req.headers.host}`;
-
-    if (!apiKey) {
-        return res.status(500).json({
-            message: 'VWorld API 키가 설정되지 않았습니다.'
-        });
-    }
+    if (!allowMethods(req, res)) return;
+    const auth = vworldAuth(req, res);
+    if (!auth) return;
+    const { apiKey, registeredDomain } = auth;
 
     const lat = Number(req.query.lat);
     const lng = Number(req.query.lng);
-
-    // 대한민국 범위 밖 좌표는 거절
-    if (
-        !Number.isFinite(lat) ||
-        !Number.isFinite(lng) ||
-        lat < 33 || lat > 39 ||
-        lng < 124 || lng > 132
-    ) {
+    if (!inKorea(lng, lat)) {
         return res.status(400).json({ message: '잘못된 좌표입니다.' });
     }
 
@@ -60,10 +44,7 @@ module.exports = async function handler(req, res) {
 
     // 한쪽이라도 실패했으면 결과를 캐시하지 않음
     if (result.zones && result.sites) {
-        res.setHeader(
-            'Cache-Control',
-            'public, s-maxage=86400, stale-while-revalidate=604800'
-        );
+        res.setHeader('Cache-Control', CACHE_ONE_DAY);
     }
 
     return res.status(200).json({

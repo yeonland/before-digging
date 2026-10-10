@@ -1,23 +1,16 @@
+// 지적도·국가유산 구역 WMS 이미지 프록시 (API 키를 브라우저에 드러내지 않음)
+const { CACHE_ONE_DAY, allowMethods, vworldAuth } = require('./_lib/http');
+
 const ALLOWED_LAYERS = new Set([
     'lp_pa_cbnd_bubun,lp_pa_cbnd_bonbun',
     'lt_c_uo301'
 ]);
 
 module.exports = async function handler(req, res) {
-    if (req.method !== 'GET') {
-        res.setHeader('Allow', 'GET');
-        return res.status(405).json({ message: 'GET 요청만 사용할 수 있습니다.' });
-    }
-
-    const apiKey = process.env.VWORLD_API_KEY;
-    const registeredDomain =
-        process.env.VWORLD_DOMAIN || `https://${req.headers.host}`;
-
-    if (!apiKey) {
-        return res.status(500).json({
-            message: 'VWorld API 키가 설정되지 않았습니다.'
-        });
-    }
+    if (!allowMethods(req, res)) return;
+    const auth = vworldAuth(req, res);
+    if (!auth) return;
+    const { apiKey, registeredDomain } = auth;
 
     const layers = String(req.query.layers || '');
 
@@ -86,10 +79,7 @@ module.exports = async function handler(req, res) {
         const image = Buffer.from(await response.arrayBuffer());
 
         res.setHeader('Content-Type', contentType);
-        res.setHeader(
-            'Cache-Control',
-            'public, s-maxage=86400, stale-while-revalidate=604800'
-        );
+        res.setHeader('Cache-Control', CACHE_ONE_DAY);
 
         return res.status(200).send(image);
     } catch (error) {

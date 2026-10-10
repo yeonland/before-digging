@@ -86,6 +86,7 @@ npx vercel dev
 ## 업데이트 기록
 
 ### 2026-10-11
+- 코드 단순화: 서버 함수 8곳에 반복되던 요청 방식 확인·VWorld 키 확인·좌표 범위 확인을 `api/_lib/http.js` 하나로 모음. 화면도 서버 요청·좌표 후보 주소 찾기·우리나라 범위 확인을 `src/shared/api.ts`로 모으고, 진단·검색을 async/await로 정리. 동작은 그대로
 - 파일을 기능별 폴더로 정리: 화면은 지도·검색·결과·도면·공용(`src/map`, `search`, `result`, `site`, `shared`), 서버 공용 부품은 `api/_lib/`, 배포 안내는 `docs/`로. 결과 패널 파일 이름을 `ResultPanel`·`ResultSections`로 바꿈. 동작은 그대로
 
 ### 2026-10-10

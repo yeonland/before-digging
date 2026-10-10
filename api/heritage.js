@@ -2,6 +2,7 @@
 // - zones: VWorld 국가유산 지정/보호구역(lt_c_uo301)
 // - sites: 국가유산청 문화유적분포지도
 const { fetchSites, isPointInGeometry } = require('./_lib/heritage-gis');
+const { CACHE_ONE_DAY, allowMethods, vworldAuth, inKorea } = require('./_lib/http');
 
 async function fetchZones(lat, lng, apiKey, registeredDomain) {
     const params = new URLSearchParams({
@@ -51,31 +52,14 @@ async function fetchSitesAt(lat, lng) {
 }
 
 module.exports = async function handler(req, res) {
-    if (req.method !== 'GET') {
-        res.setHeader('Allow', 'GET');
-        return res.status(405).json({ message: 'GET 요청만 사용할 수 있습니다.' });
-    }
-
-    const apiKey = process.env.VWORLD_API_KEY;
-    const registeredDomain =
-        process.env.VWORLD_DOMAIN || `https://${req.headers.host}`;
-
-    if (!apiKey) {
-        return res.status(500).json({
-            message: 'VWorld API 키가 설정되지 않았습니다.'
-        });
-    }
+    if (!allowMethods(req, res)) return;
+    const auth = vworldAuth(req, res);
+    if (!auth) return;
+    const { apiKey, registeredDomain } = auth;
 
     const lat = Number(req.query.lat);
     const lng = Number(req.query.lng);
-
-    // 대한민국 범위 밖 좌표는 거절
-    if (
-        !Number.isFinite(lat) ||
-        !Number.isFinite(lng) ||
-        lat < 33 || lat > 39 ||
-        lng < 124 || lng > 132
-    ) {
+    if (!inKorea(lng, lat)) {
         return res.status(400).json({ message: '잘못된 좌표입니다.' });
     }
 
@@ -100,10 +84,7 @@ module.exports = async function handler(req, res) {
 
     // 한쪽이라도 실패했으면 결과를 캐시하지 않음
     if (zonesResult.status === 'fulfilled' && sitesResult.status === 'fulfilled') {
-        res.setHeader(
-            'Cache-Control',
-            'public, s-maxage=86400, stale-while-revalidate=604800'
-        );
+        res.setHeader('Cache-Control', CACHE_ONE_DAY);
     }
 
     return res.status(200).json({

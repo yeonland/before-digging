@@ -2,6 +2,7 @@
 import { useRef, useState } from 'react';
 import { parseCoordinates } from './coordinates';
 import { loadDxfSite } from '../site/loadDxfSite';
+import { fetchAddresses, getJson } from '../shared/api';
 import type { SearchResult } from '../shared/types';
 
 type ListState =
@@ -33,9 +34,7 @@ export function SearchBox({ onGo, onDxfFile }: {
             return;
         }
 
-        const points = candidates.map(item => item.center.join(',')).join('|');
-        const response = await fetch(`/api/site?points=${encodeURIComponent(points)}`);
-        const addresses: (string | null)[] = response.ok ? (await response.json()).addresses : [];
+        const addresses = await fetchAddresses(candidates.map(item => item.center));
         const results = candidates
             .map((item, index) => ({
                 label: addresses[index] || '지적도에 없는 곳 (바다 등)',
@@ -54,7 +53,7 @@ export function SearchBox({ onGo, onDxfFile }: {
         setList({ kind: 'results', results, heading: '좌표계에 따라 위치가 달라져요. 맞는 곳을 골라 주세요.' });
     }
 
-    function search() {
+    async function search() {
         const text = keyword.trim();
         if (text.length < 2) {
             showMessage('주소나 장소 이름을 2글자 이상 입력해 주세요.');
@@ -71,24 +70,19 @@ export function SearchBox({ onGo, onDxfFile }: {
         }
 
         showMessage('검색 중...');
-        fetch(`/api/search?query=${encodeURIComponent(text)}`)
-            .then(response => {
-                if (!response.ok) throw new Error('주소 검색 실패');
-                return response.json();
-            })
-            .then((data: { results: SearchResult[] }) => {
-                if (data.results.length === 0) {
-                    showMessage('찾는 주소가 없어요. 지번(예: 경주시 인왕동 815-1)이나 도로명(예: 세종대로 110)으로 검색해 보세요.');
-                } else if (data.results.length === 1) {
-                    go(data.results[0]);
-                } else {
-                    setList({ kind: 'results', results: data.results });
-                }
-            })
-            .catch(error => {
-                console.error('주소 검색 오류:', error);
-                showMessage('주소 검색에 실패했어요. 잠시 후 다시 시도해 주세요.');
-            });
+        try {
+            const { results } = await getJson<{ results: SearchResult[] }>(`/api/search?query=${encodeURIComponent(text)}`);
+            if (results.length === 0) {
+                showMessage('찾는 주소가 없어요. 지번(예: 경주시 인왕동 815-1)이나 도로명(예: 세종대로 110)으로 검색해 보세요.');
+            } else if (results.length === 1) {
+                go(results[0]);
+            } else {
+                setList({ kind: 'results', results });
+            }
+        } catch (error) {
+            console.error('주소 검색 오류:', error);
+            showMessage('주소 검색에 실패했어요. 잠시 후 다시 시도해 주세요.');
+        }
     }
 
     return (
