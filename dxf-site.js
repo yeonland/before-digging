@@ -50,7 +50,98 @@
         return Math.abs(sum) / 2;
     }
 
-    // DXF에서 닫힌 폴리라인을 레이어별로 모음
+    // ---------------------------------------------------------------
+    // 표고(지반 해발) 읽기: 측량 현황도의 표고점 글자, 높이 값이 있는 점·블록·등고선
+    // ---------------------------------------------------------------
+    // 표고가 들어 있을 만한 레이어 이름
+    const ELEVATION_LAYER = /표고|지반|레벨|높이|등고|level|elev|spot|height|contour|topo|^el$|^gl$|^fh$|[-_ ](el|gl|fh)$|^(el|gl|fh)[-_ ]/i;
+    // 글자 자체에 표고 표시가 붙은 경우 (EL 35.20, GL=35.2, 표고 35.20, ▽35.20)
+    const ELEVATION_PREFIX = /^(?:EL|GL|FH|FL|H|표고|지반고|▽|▼)\s*[=:.+]?\s*(-?\d{1,4}(?:\.\d{1,3})?)\s*m?$/i;
+    const PLAIN_NUMBER = /^[+]?(-?\d{1,4}\.\d{1,3})$/;
+    // 우리나라 지반 해발로 볼 수 있는 범위 (m)
+    const ELEVATION_RANGE = [-20, 2000];
+
+    function inElevationRange(value) {
+        return Number.isFinite(value) && value >= ELEVATION_RANGE[0] && value <= ELEVATION_RANGE[1];
+    }
+
+    // MTEXT 서식 코드(\P 줄바꿈, \fArial; 같은 글꼴 지정 등)와 중괄호를 뺀 글자
+    function plainText(text) {
+        return String(text || '')
+            .replace(/\\[A-OQ-Za-z][^;\\]*;/g, '')
+            .replace(/\\P/g, ' ')
+            .replace(/[{}]/g, '')
+            .trim();
+    }
+
+    function textElevation(text, layer) {
+        const clean = plainText(text);
+        const prefixed = clean.match(ELEVATION_PREFIX);
+        if (prefixed) return Number(prefixed[1]);
+        const plain = clean.match(PLAIN_NUMBER);
+        // 숫자만 있는 글자는 치수·지번일 수도 있어서 표고 레이어에 있을 때만
+        if (plain && ELEVATION_LAYER.test(layer || '')) return Number(plain[1]);
+        return null;
+    }
+
+    // 도면 전체에서 표고 후보를 모음: { x, y, z, kind: 'text' | 'point' | 'contour' }
+    function readElevations(dxf) {
+        const found = [];
+        // 높이 범위는 단위(mm)를 맞춘 뒤 siteElevation에서 확인
+        const add = (x, y, z, kind) => {
+            if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z) && z !== 0) found.push({ x, y, z, kind });
+        };
+
+        (dxf.entities || []).forEach((entity) => {
+            const layer = entity.layer || '';
+            if (['TEXT', 'MTEXT', 'ATTRIB'].includes(entity.type)) {
+                const position = entity.startPoint || entity.position || {};
+                const value = textElevation(entity.text, layer);
+                if (value !== null) add(position.x, position.y, value, 'text');
+            } else if (entity.type === 'POINT' || entity.type === 'INSERT') {
+                // 표고점 블록은 높이(z) 값을 가진 위치에 놓는 경우가 많음
+                const position = entity.position || {};
+                add(position.x, position.y, position.z, 'point');
+            } else if (entity.type === 'LWPOLYLINE' && Number.isFinite(entity.elevation)) {
+                // 등고선: 선 전체가 한 높이
+                (entity.vertices || []).forEach((vertex) => add(vertex.x, vertex.y, entity.elevation, 'contour'));
+            } else if (entity.type === 'POLYLINE' || entity.type === 'LINE') {
+                (entity.vertices || []).forEach((vertex) => add(vertex.x, vertex.y, vertex.z, 'contour'));
+            }
+        });
+        return found;
+    }
+
+    // 고른 경계 안의 표고로 대표값(중간값)을 정함
+    // 표고점 글자가 있으면 그것만 쓰고, 없으면 점·등고선 높이를 씀
+    function siteElevation(layer, elevations) {
+        if (!elevations || elevations.length === 0) return null;
+        const outers = layer.polygons.map(({ ring }) => ring);
+        const inside = elevations.filter(({ x, y }) => outers.some((ring) => pointInRing([x, y], ring)));
+        const texts = inside.filter((item) => item.kind === 'text');
+        const used = texts.length > 0 ? texts : inside;
+        if (used.length === 0) return null;
+
+        // mm 단위 도면은 높이 좌표도 mm일 수 있음 (글자로 쓴 표고는 m)
+        const values = used
+            .map((item) => (item.kind !== 'text' && layer.scale !== 1 ? item.z * layer.scale : item.z))
+            .filter(inElevationRange)
+            .sort((a, b) => a - b);
+        if (values.length === 0) return null;
+
+        const round = (value) => Math.round(value * 100) / 100;
+        const middle = Math.floor(values.length / 2);
+        const median = values.length % 2 ? values[middle] : (values[middle - 1] + values[middle]) / 2;
+        return {
+            count: values.length,
+            source: texts.length > 0 ? 'text' : 'height',
+            min: round(values[0]),
+            max: round(values[values.length - 1]),
+            median: round(median)
+        };
+    }
+
+    // DXF에서 닫힌 폴리라인을 레이어별로 모음 (+ 표고 후보)
     function readBoundaries(text) {
         const parser = new window.DxfParser();
         const dxf = parser.parseSync(text);
@@ -84,7 +175,7 @@
             return { name, rings, polygons, scale, area: drawingArea * scale * scale };
         }).sort((a, b) => b.area - a.area);
 
-        return { layers };
+        return { layers, elevations: readElevations(dxf) };
     }
 
     function layerCenter(layer) {
@@ -141,5 +232,5 @@
         return inside;
     }
 
-    window.dxfSite = { CRS_LIST, decodeDxf, readBoundaries, crsCandidates, toGeometry };
+    window.dxfSite = { CRS_LIST, decodeDxf, readBoundaries, crsCandidates, toGeometry, siteElevation };
 })();

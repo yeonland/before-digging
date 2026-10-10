@@ -1070,12 +1070,12 @@
             try {
                 await loadDxfLibs();
                 const text = window.dxfSite.decodeDxf(await file.arrayBuffer());
-                const { layers } = window.dxfSite.readBoundaries(text);
+                const { layers, elevations } = window.dxfSite.readBoundaries(text);
                 if (layers.length === 0) {
                     showSiteMessage('도면에서 닫힌 경계선(닫힌 폴리라인)을 찾지 못했어요. 사업부지 경계를 닫힌 폴리라인으로 그린 DXF인지 확인해 주세요.');
                     return;
                 }
-                siteDraft = { fileName: file.name, layers, layerIndex: 0, crs: null };
+                siteDraft = { fileName: file.name, layers, elevations, layerIndex: 0, crs: null };
                 await renderSiteSetup();
             } catch (error) {
                 console.error('도면 읽기 오류:', error);
@@ -1183,6 +1183,8 @@
                     return;
                 }
                 data.parcels.forEach(item => { item.risk = window.buildRisk(item); });
+                // 고른 경계 안의 표고 (측량 현황도라면 표고점 글자, 등고선 높이)
+                data.elevation = window.dxfSite.siteElevation(siteDraft.layers[siteDraft.layerIndex], siteDraft.elevations);
                 lastSiteResponse = data;
                 showSitePanel();
             } catch (error) {
@@ -1282,7 +1284,8 @@
                 title: '도면 사업부지 진단 결과 · 해야 할 일',
                 areaLabel: '부지 면적',
                 extra: table,
-                shareable: false
+                shareable: false,
+                elevation: data.elevation
             });
             if (parcelHighlight) map.removeLayer(parcelHighlight);
             parcelHighlight = null;
@@ -1522,10 +1525,22 @@
             return Number.isFinite(value) && value >= 0 ? value : null;
         }
 
+        // 지반 해발은 바닷가 매립지처럼 0보다 낮을 수 있음
+        function readElevation(id) {
+            const input = document.getElementById(id);
+            if (!input || input.value.trim() === '') return null;
+            const value = Number(input.value);
+            return Number.isFinite(value) && value >= -20 && value <= 2000 ? value : null;
+        }
+
+        // 도면(DXF)에서 읽은 부지 표고 (도면 사업부지 결과에서만)
+        let panelElevation = null;
+
         // options: title(제목), areaLabel(면적 이름), extra(위험도 아래에 넣을 내용), back(도면 사업부지로 돌아가는 버튼),
-        //          shareable(false면 링크 복사 버튼을 빼고 PDF 저장만)
+        //          shareable(false면 링크 복사 버튼을 빼고 PDF 저장만), elevation(도면에서 읽은 표고)
         function showGuidancePanel(data, options = {}) {
             lastParcelResult = data;
+            panelElevation = options.elevation || null;
             diagnosedAt = new Date();
             panelLocation = shareLocation;
             const shareable = options.shareable !== false && shareLocation !== null;
@@ -1551,16 +1566,20 @@
                     <label>공사 종류 <select id="work-type">${workOptions}</select></label>
                     <label>사업(대지) 면적 <input id="land-area" type="number" min="0" step="1" value="${Math.round(data.parcel.area)}"> ㎡</label>
                     <label id="floor-area-field" hidden>건축물 연면적 <input id="floor-area" type="number" min="0" step="1"> ㎡</label>
+                    <label>지반 해발 <input id="ground-level" type="number" step="0.01" placeholder="예: 35.2" value="${panelElevation ? panelElevation.median : ''}"> m</label>
+                    <label>굴착 깊이 <input id="dig-depth" type="number" min="0" step="0.1" placeholder="예: 3"> m</label>
                 </div>
                 <div id="guidance-body"></div>
             `;
             resultPanel.hidden = false;
 
-            // 공유 링크로 열었으면 링크에 담긴 공사 종류·면적을 채움 (처음 한 번만)
+            // 공유 링크로 열었으면 링크에 담긴 공사 종류·면적·해발을 채움 (처음 한 번만)
             if (sharedInputs) {
                 document.getElementById('work-type').value = sharedInputs.work;
                 if (sharedInputs.area !== null) document.getElementById('land-area').value = sharedInputs.area;
                 if (sharedInputs.floor !== null) document.getElementById('floor-area').value = sharedInputs.floor;
+                if (sharedInputs.ground !== null) document.getElementById('ground-level').value = sharedInputs.ground;
+                if (sharedInputs.depth !== null) document.getElementById('dig-depth').value = sharedInputs.depth;
                 sharedInputs = null;
             }
 
@@ -1597,6 +1616,41 @@
             return law
                 ? `<details class="law"><summary>법령 근거</summary>${escapeHtml(law)}</details>`
                 : '';
+        }
+
+        // 굴착 깊이: 지반 해발 - 굴착 깊이 = 굴착 바닥 해발
+        // (주변 유적층 해발과 비교하는 기능은 보고서 자료를 모아야 해서 아직 없음)
+        function excavationSection() {
+            const ground = readElevation('ground-level');
+            const depth = readNumber('dig-depth');
+            const fromDrawing = panelElevation
+                ? `<div class="survey-report">도면에서 표고 ${panelElevation.count}개를 읽었어요 (${panelElevation.source === 'text' ? '표고 글자' : '점·등고선 높이'}, 최저 ${panelElevation.min}m ~ 최고 ${panelElevation.max}m). 지반 해발에는 중간값 ${panelElevation.median}m를 넣었어요. 땅이 기울어 있으면 실제 굴착 위치의 값으로 고쳐 주세요.</div>`
+                : '';
+
+            let body;
+            if (ground !== null && depth !== null) {
+                const bottom = Math.round((ground - depth) * 100) / 100;
+                body = `
+                    <div class="step-title">굴착 바닥 해발 약 ${bottom}m</div>
+                    <div>지반 해발 ${ground}m에서 ${depth}m를 파면 바닥은 해발 약 ${bottom}m예요. 주변 발굴조사에서 유구(유적의 흔적)가 나온 해발이 이보다 높으면, 공사가 유적층에 닿을 수 있어요.</div>
+                    <ul class="step-items">
+                        <li>주변 유적이 어느 해발에서 나왔는지는 아래 "주변 조사 이력"의 보고서나 조사기관에 확인해 보세요. 이 서비스는 아직 유적층 해발 자료가 없어요.</li>
+                        <li>얕게 파는 공사라도 유존지역 안이면 국가유산영향진단 대상인 것은 같아요. 굴착 깊이는 진단·협의 때 참고 자료가 돼요.</li>
+                    </ul>`;
+            } else if (depth !== null) {
+                body = '<div>지반 해발을 넣으면 굴착 바닥 해발을 계산해요. 측량도나 설계도의 현황 지반고(EL, GL)를 넣어 주세요.</div>';
+            } else if (ground !== null) {
+                body = '<div>굴착 깊이(기초·지하층을 위해 파는 깊이)를 넣으면 굴착 바닥 해발을 계산해요.</div>';
+            } else {
+                body = '<div>위에 지반 해발과 굴착 깊이를 넣으면 굴착 바닥이 해발 몇 m인지 계산해요. 지반 해발은 측량도나 설계도의 현황 지반고(EL, GL)를 보거나, 도면(DXF)을 올리면 자동으로 읽어요.</div>';
+            }
+
+            return `
+                <h4>굴착 깊이</h4>
+                <div class="step info">
+                    ${body}
+                    ${fromDrawing}
+                </div>`;
         }
 
         function renderGuidance() {
@@ -1677,6 +1731,7 @@
             document.getElementById('guidance-body').innerHTML = `
                 <h4>해야 할 일</h4>
                 ${steps}
+                ${excavationSection()}
                 ${cost}
                 ${nearby}
                 ${surveySection}
@@ -1752,6 +1807,10 @@
                 if (area !== null && area !== Math.round(lastParcelResult.parcel.area)) url.searchParams.set('area', area);
                 const floor = readNumber('floor-area');
                 if (workInput.value === 'business' && floor !== null) url.searchParams.set('floor', floor);
+                const ground = readElevation('ground-level');
+                if (ground !== null) url.searchParams.set('ground', ground);
+                const depth = readNumber('dig-depth');
+                if (depth !== null) url.searchParams.set('depth', depth);
             }
             return url.toString();
         }
@@ -1830,10 +1889,13 @@
                 return params.has(name) && Number.isFinite(value) && value >= 0 ? value : null;
             };
             const work = params.get('work') || '';
+            const ground = Number(params.get('ground'));
             sharedInputs = {
                 work: WORK_TYPES.some(([value]) => value === work) ? work : '',
                 area: number('area'),
-                floor: number('floor')
+                floor: number('floor'),
+                ground: params.has('ground') && Number.isFinite(ground) && ground >= -20 && ground <= 2000 ? ground : null,
+                depth: number('depth')
             };
 
             const latlng = L.latLng(lat, lng);

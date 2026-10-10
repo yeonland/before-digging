@@ -1,6 +1,7 @@
 // 테스트용 DXF 도면 만들기: 경주 인왕동 일대 가상의 사업부지 (동부원점 EPSG:5187)
 // - 부지경계: 닫힌 폴리라인 (안쪽에 제외 구역 하나)
 // - 건물: 작은 닫힌 폴리라인 2개 / 도로중심선: 열린 선 (경계로 잡히면 안 됨)
+// - 표고: 부지 안 표고점 글자 5개(레이어 '표고'), 부지 밖 표고점 1개(대표값에 들어가면 안 됨), 높이 37m 등고선
 // 사용: cd scripts && npm i --no-save proj4@2.11.0 && node make-sample-dxf.mjs (끝나면 scripts/node_modules 삭제)
 import { writeFile } from 'node:fs/promises';
 import proj4 from 'proj4';
@@ -15,12 +16,23 @@ const buildings = [
     [[129.2195, 35.8350], [129.2197, 35.8350], [129.2197, 35.8352], [129.2195, 35.8352]].map(toTm)
 ];
 const road = [[129.2175, 35.8344], [129.2205, 35.8344]].map(toTm);
+const spotHeights = [
+    [[129.2183, 35.8348], '35.12'], [[129.2190, 35.8349], '35.40'], [[129.2196, 35.8348], '35.85'],
+    [[129.2185, 35.8355], '36.02'], [[129.2194, 35.8356], '36.31'],
+    [[129.2170, 35.8340], '33.00'] // 부지 밖
+].map(([point, value]) => [toTm(point), value]);
+const contour = [[129.2178, 35.8358], [129.2203, 35.8358]].map(toTm);
 
-function lwpolyline(layer, points, closed) {
+function lwpolyline(layer, points, closed, elevation) {
     return [
         '0', 'LWPOLYLINE', '8', layer, '90', String(points.length), '70', closed ? '1' : '0',
+        ...(elevation !== undefined ? ['38', String(elevation)] : []),
         ...points.flatMap(([x, y]) => ['10', String(x), '20', String(y)])
     ];
+}
+
+function text(layer, [x, y], value) {
+    return ['0', 'TEXT', '8', layer, '10', String(x), '20', String(y), '30', '0', '40', '1', '1', value];
 }
 
 const lines = [
@@ -30,6 +42,8 @@ const lines = [
     ...lwpolyline('부지경계', excluded, true),
     ...buildings.flatMap((points) => lwpolyline('건물', points, true)),
     ...lwpolyline('도로중심선', road, false),
+    ...spotHeights.flatMap(([point, value]) => text('표고', point, value)),
+    ...lwpolyline('등고선', contour, false, 37),
     '0', 'ENDSEC', '0', 'EOF'
 ];
 
