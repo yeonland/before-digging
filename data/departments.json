@@ -1,0 +1,1334 @@
+{
+ "source": "행정안전부 행정표준코드관리시스템 기관코드 전체자료 (www.code.go.kr)",
+ "baseDate": "2026-10-10",
+ "districts": {
+  "서울특별시 종로구": {
+   "sure": true,
+   "departments": [
+    "문화환경국 문화유산과"
+   ]
+  },
+  "서울특별시 중구": {
+   "sure": false,
+   "departments": [
+    "경제문화국 문화정책과"
+   ]
+  },
+  "서울특별시 용산구": {
+   "sure": false,
+   "departments": [
+    "문화경제국 문화진흥과"
+   ]
+  },
+  "서울특별시 성동구": {
+   "sure": false,
+   "departments": [
+    "행정관리국 문화체육과"
+   ]
+  },
+  "서울특별시 광진구": {
+   "sure": false,
+   "departments": [
+    "문화교육국 문화예술과"
+   ]
+  },
+  "서울특별시 동대문구": {
+   "sure": false,
+   "departments": [
+    "행정국 문화관광과"
+   ]
+  },
+  "서울특별시 중랑구": {
+   "sure": false,
+   "departments": [
+    "행정국 문화관광과"
+   ]
+  },
+  "서울특별시 성북구": {
+   "sure": false,
+   "departments": [
+    "행정문화국 문화체육과"
+   ]
+  },
+  "서울특별시 강북구": {
+   "sure": false,
+   "departments": [
+    "문화생활국 문화관광과"
+   ]
+  },
+  "서울특별시 도봉구": {
+   "sure": false,
+   "departments": [
+    "미래환경국 문화체육과"
+   ]
+  },
+  "서울특별시 노원구": {
+   "sure": false,
+   "departments": [
+    "문화도시행정국 문화도시과"
+   ]
+  },
+  "서울특별시 은평구": {
+   "sure": false,
+   "departments": [
+    "교육문화국 문화관광과"
+   ]
+  },
+  "서울특별시 서대문구": {
+   "sure": false,
+   "departments": [
+    "교육문화체육국 문화체육과"
+   ]
+  },
+  "서울특별시 마포구": {
+   "sure": false,
+   "departments": [
+    "문화경제국 문화예술과"
+   ]
+  },
+  "서울특별시 양천구": {
+   "sure": false,
+   "departments": [
+    "교육문화국 문화과"
+   ]
+  },
+  "서울특별시 강서구": {
+   "sure": false,
+   "departments": [
+    "행정문화국 문화예술과"
+   ]
+  },
+  "서울특별시 구로구": {
+   "sure": false,
+   "departments": [
+    "행정관리국 문화관광과"
+   ]
+  },
+  "서울특별시 금천구": {
+   "sure": false,
+   "departments": [
+    "문화환경국 문화체육과"
+   ]
+  },
+  "서울특별시 영등포구": {
+   "sure": false,
+   "departments": [
+    "교육문화국 문화예술과"
+   ]
+  },
+  "서울특별시 동작구": {
+   "sure": false,
+   "departments": [
+    "미래교육국 문화정책과"
+   ]
+  },
+  "서울특별시 관악구": {
+   "sure": false,
+   "departments": [
+    "청년문화국 문화관광체육과"
+   ]
+  },
+  "서울특별시 서초구": {
+   "sure": false,
+   "departments": [
+    "문화행정국 문화관광과"
+   ]
+  },
+  "서울특별시 강남구": {
+   "sure": false,
+   "departments": [
+    "미래문화국 문화도시과"
+   ]
+  },
+  "서울특별시 송파구": {
+   "sure": true,
+   "departments": [
+    "교육문화국 문화유산과"
+   ]
+  },
+  "서울특별시 강동구": {
+   "sure": false,
+   "departments": [
+    "문화환경국 문화예술과"
+   ]
+  },
+  "부산광역시 중구": {
+   "sure": false,
+   "departments": [
+    "총무국 문화관광과"
+   ]
+  },
+  "부산광역시 서구": {
+   "sure": false,
+   "departments": [
+    "행정지원국 문화관광과"
+   ]
+  },
+  "부산광역시 동구": {
+   "sure": false,
+   "departments": [
+    "문화체육관광국 문화관광과"
+   ]
+  },
+  "부산광역시 영도구": {
+   "sure": false,
+   "departments": [
+    "행정관리국 문화관광과"
+   ]
+  },
+  "부산광역시 부산진구": {
+   "sure": false,
+   "departments": [
+    "문화경제국 문화체육과"
+   ]
+  },
+  "부산광역시 동래구": {
+   "sure": false,
+   "departments": [
+    "문화환경국 문화관광과"
+   ]
+  },
+  "부산광역시 남구": {
+   "sure": false,
+   "departments": [
+    "행정자치국 문화관광과"
+   ]
+  },
+  "부산광역시 북구": {
+   "sure": false,
+   "departments": [
+    "문화교육국 문화관광과"
+   ]
+  },
+  "부산광역시 해운대구": {
+   "sure": false,
+   "departments": [
+    "문화관광경제국 문화관광과"
+   ]
+  },
+  "부산광역시 사하구": {
+   "sure": false,
+   "departments": [
+    "문화관광교육국 문화예술과"
+   ]
+  },
+  "부산광역시 금정구": {
+   "sure": false,
+   "departments": [
+    "문화환경국 문화관광과"
+   ]
+  },
+  "부산광역시 강서구": {
+   "sure": false,
+   "departments": [
+    "문화환경국 문화체육과"
+   ]
+  },
+  "부산광역시 연제구": {
+   "sure": false,
+   "departments": [
+    "경제문화국 문화체육과"
+   ]
+  },
+  "부산광역시 수영구": {
+   "sure": false,
+   "departments": [
+    "행정문화국 문화예술과"
+   ]
+  },
+  "부산광역시 사상구": {
+   "sure": false,
+   "departments": [
+    "문화생활국 문화체육과"
+   ]
+  },
+  "부산광역시 기장군": {
+   "sure": false,
+   "departments": [
+    "문화환경국 문화관광과"
+   ]
+  },
+  "대구광역시 동구": {
+   "sure": false,
+   "departments": [
+    "행정문화교육국 문화관광과"
+   ]
+  },
+  "대구광역시 서구": {
+   "sure": false,
+   "departments": [
+    "교육문화국 문화홍보과"
+   ]
+  },
+  "대구광역시 남구": {
+   "sure": false,
+   "departments": [
+    "인구정책국 문화관광과"
+   ]
+  },
+  "대구광역시 북구": {
+   "sure": false,
+   "departments": [
+    "문화교육국 문화예술과"
+   ]
+  },
+  "대구광역시 수성구": {
+   "sure": false,
+   "departments": [
+    "문화체육국 문화관광과"
+   ]
+  },
+  "대구광역시 달서구": {
+   "sure": false,
+   "departments": [
+    "문화교통국 문화관광과"
+   ]
+  },
+  "대구광역시 달성군": {
+   "sure": false,
+   "departments": [
+    "문화관광국 문화예술과"
+   ]
+  },
+  "인천광역시 영종구": {
+   "sure": false,
+   "departments": [
+    "공항경제국 문화관광체육과"
+   ]
+  },
+  "인천광역시 제물포구": {
+   "sure": false,
+   "departments": [
+    "경제문화국 문화관광과"
+   ]
+  },
+  "인천광역시 미추홀구": {
+   "sure": false,
+   "departments": [
+    "문화경제국 문화예술과"
+   ]
+  },
+  "인천광역시 연수구": {
+   "sure": false,
+   "departments": [
+    "자치행정국 문화관광과"
+   ]
+  },
+  "인천광역시 남동구": {
+   "sure": false,
+   "departments": [
+    "행정국 문화관광과"
+   ]
+  },
+  "인천광역시 부평구": {
+   "sure": false,
+   "departments": [
+    "기획문화국 문화관광과"
+   ]
+  },
+  "인천광역시 계양구": {
+   "sure": false,
+   "departments": [
+    "행정안전국 문화체육관광과"
+   ]
+  },
+  "인천광역시 서해구": {
+   "sure": false,
+   "departments": [
+    "행정문화국 문화관광체육과"
+   ]
+  },
+  "인천광역시 검단구": {
+   "sure": false,
+   "departments": [
+    "경제문화교통국 문화체육관광과"
+   ]
+  },
+  "인천광역시 강화군": {
+   "sure": true,
+   "departments": [
+    "문화복지국 국가유산과"
+   ]
+  },
+  "인천광역시 옹진군": {
+   "sure": false,
+   "departments": [
+    "관광복지국 관광문화과"
+   ]
+  },
+  "대전광역시 동구": {
+   "sure": false,
+   "departments": [
+    "경제문화국 문화관광체육과"
+   ]
+  },
+  "대전광역시 중구": {
+   "sure": false,
+   "departments": [
+    "문화경제국 문화체육과"
+   ]
+  },
+  "대전광역시 서구": {
+   "sure": false,
+   "departments": [
+    "자치행정국 문화체육과"
+   ]
+  },
+  "대전광역시 유성구": {
+   "sure": false,
+   "departments": [
+    "경제문화국 문화관광체육과"
+   ]
+  },
+  "대전광역시 대덕구": {
+   "sure": false,
+   "departments": [
+    "미래전략국 문화관광체육과"
+   ]
+  },
+  "울산광역시 중구": {
+   "sure": false,
+   "departments": [
+    "미래전략국 문화관광과"
+   ]
+  },
+  "울산광역시 남구": {
+   "sure": false,
+   "departments": [
+    "문화관광국 문화예술과"
+   ]
+  },
+  "울산광역시 동구": {
+   "sure": false,
+   "departments": [
+    "행정지원국 문화체육과"
+   ]
+  },
+  "울산광역시 북구": {
+   "sure": false,
+   "departments": [
+    "경제문화국 문화체육과"
+   ]
+  },
+  "경기도 수원시": {
+   "sure": true,
+   "departments": [
+    "화성사업소 문화유산관리과",
+    "화성사업소 문화유산복원과"
+   ]
+  },
+  "경기도 성남시": {
+   "sure": false,
+   "departments": [
+    "교육문화체육국 문화관광과"
+   ]
+  },
+  "경기도 의정부시": {
+   "sure": false,
+   "departments": [
+    "문화학습국 문화예술과"
+   ]
+  },
+  "경기도 안양시": {
+   "sure": false,
+   "departments": [
+    "복지문화국 문화관광과"
+   ]
+  },
+  "경기도 부천시": {
+   "sure": false,
+   "departments": [
+    "문화체육국 문화정책과"
+   ]
+  },
+  "경기도 광명시": {
+   "sure": false,
+   "departments": [
+    "경제문화국 문화관광과"
+   ]
+  },
+  "경기도 평택시": {
+   "sure": true,
+   "departments": [
+    "문화국제국 문화유산관광과"
+   ]
+  },
+  "경기도 동두천시": {
+   "sure": false,
+   "departments": [
+    "복지문화국 문화예술과"
+   ]
+  },
+  "경기도 안산시": {
+   "sure": false,
+   "departments": [
+    "문화체육관광국 문화예술과"
+   ]
+  },
+  "경기도 고양시": {
+   "sure": false,
+   "departments": [
+    "교육문화국 문화예술과"
+   ]
+  },
+  "경기도 과천시": {
+   "sure": false,
+   "departments": [
+    "행정안전국 문화체육과"
+   ]
+  },
+  "경기도 구리시": {
+   "sure": false,
+   "departments": [
+    "복지문화국 문화예술과"
+   ]
+  },
+  "경기도 남양주시": {
+   "sure": true,
+   "departments": [
+    "문화교육국 관광유산과"
+   ]
+  },
+  "경기도 오산시": {
+   "sure": false,
+   "departments": [
+    "경제문화국 문화예술과"
+   ]
+  },
+  "경기도 시흥시": {
+   "sure": false,
+   "departments": [
+    "경제국 문화예술과"
+   ]
+  },
+  "경기도 군포시": {
+   "sure": false,
+   "departments": [
+    "행정지원국 문화예술과"
+   ]
+  },
+  "경기도 의왕시": {
+   "sure": false,
+   "departments": [
+    "복지문화국 문화관광과"
+   ]
+  },
+  "경기도 하남시": {
+   "sure": false,
+   "departments": [
+    "경제문화국 문화정책과"
+   ]
+  },
+  "경기도 용인시": {
+   "sure": false,
+   "departments": [
+    "문화체육관광국 문화예술과"
+   ]
+  },
+  "경기도 파주시": {
+   "sure": false,
+   "departments": [
+    "문화교육국 문화예술과"
+   ]
+  },
+  "경기도 이천시": {
+   "sure": false,
+   "departments": [
+    "문화교육국 문화예술과"
+   ]
+  },
+  "경기도 안성시": {
+   "sure": false,
+   "departments": [
+    "도시경제국 문화관광과"
+   ]
+  },
+  "경기도 김포시": {
+   "sure": false,
+   "departments": [
+    "교육문화국 문화예술과"
+   ]
+  },
+  "경기도 연천군": {
+   "sure": false,
+   "departments": [
+    "문화관광국 문화체육과"
+   ]
+  },
+  "경기도 가평군": {
+   "sure": false,
+   "departments": [
+    "경제산업국 문화체육과"
+   ]
+  },
+  "경기도 양평군": {
+   "sure": false,
+   "departments": [
+    "문화복지국 문화관광과"
+   ]
+  },
+  "강원특별자치도 춘천시": {
+   "sure": false,
+   "departments": [
+    "문화환경국 문화예술과"
+   ]
+  },
+  "강원특별자치도 원주시": {
+   "sure": false,
+   "departments": [
+    "문화교육국 문화예술과"
+   ]
+  },
+  "강원특별자치도 강릉시": {
+   "sure": true,
+   "departments": [
+    "문화관광해양국 문화유산과"
+   ]
+  },
+  "강원특별자치도 동해시": {
+   "sure": false,
+   "departments": [
+    "행정복지국 문화체육과"
+   ]
+  },
+  "강원특별자치도 태백시": {
+   "sure": true,
+   "departments": [
+    "복지국 석탄산업유산과"
+   ]
+  },
+  "강원특별자치도 속초시": {
+   "sure": false,
+   "departments": [
+    "행정국 문화체육과"
+   ]
+  },
+  "강원특별자치도 삼척시": {
+   "sure": false,
+   "departments": [
+    "문화관광체육국 문화예술과"
+   ]
+  },
+  "강원특별자치도 홍천군": {
+   "sure": false,
+   "departments": [
+    "경제진흥국 관광문화과"
+   ]
+  },
+  "강원특별자치도 횡성군": {
+   "sure": false,
+   "departments": [
+    "경제산업국 문화관광과"
+   ]
+  },
+  "강원특별자치도 영월군": {
+   "sure": false,
+   "departments": [
+    "문화관광과"
+   ]
+  },
+  "강원특별자치도 평창군": {
+   "sure": true,
+   "departments": [
+    "행정지원국 올림픽유산과"
+   ]
+  },
+  "강원특별자치도 정선군": {
+   "sure": false,
+   "departments": [
+    "시설국 문화체육과"
+   ]
+  },
+  "강원특별자치도 철원군": {
+   "sure": false,
+   "departments": [
+    "문화체육과"
+   ]
+  },
+  "강원특별자치도 화천군": {
+   "sure": false,
+   "departments": [
+    "문화체육과"
+   ]
+  },
+  "강원특별자치도 양구군": {
+   "sure": false,
+   "departments": [
+    "경제건설국 관광문화과"
+   ]
+  },
+  "강원특별자치도 고성군": {
+   "sure": false,
+   "departments": [
+    "관광경제국 관광문화과"
+   ]
+  },
+  "강원특별자치도 양양군": {
+   "sure": false,
+   "departments": [
+    "관광경제국 관광문화과"
+   ]
+  },
+  "충청북도 충주시": {
+   "sure": false,
+   "departments": [
+    "문화체육관광국 문화예술과"
+   ]
+  },
+  "충청북도 제천시": {
+   "sure": false,
+   "departments": [
+    "문화복지국 문화예술과"
+   ]
+  },
+  "충청북도 보은군": {
+   "sure": false,
+   "departments": [
+    "문화관광과"
+   ]
+  },
+  "충청북도 옥천군": {
+   "sure": false,
+   "departments": [
+    "미래전략국 문화관광과"
+   ]
+  },
+  "충청북도 영동군": {
+   "sure": false,
+   "departments": [
+    "행정관광복지국 국악문화예술과"
+   ]
+  },
+  "충청북도 진천군": {
+   "sure": false,
+   "departments": [
+    "문화복지국 문화관광과"
+   ]
+  },
+  "충청북도 괴산군": {
+   "sure": false,
+   "departments": [
+    "미래기획국 문화관광과"
+   ]
+  },
+  "충청북도 음성군": {
+   "sure": false,
+   "departments": [
+    "문화복지국 문화관광과"
+   ]
+  },
+  "충청북도 단양군": {
+   "sure": false,
+   "departments": [
+    "행정복지국 문화체육과"
+   ]
+  },
+  "충청남도 천안시": {
+   "sure": false,
+   "departments": [
+    "문화체육국 문화예술과"
+   ]
+  },
+  "충청남도 공주시": {
+   "sure": true,
+   "departments": [
+    "경제문화국 문화유산과"
+   ]
+  },
+  "충청남도 아산시": {
+   "sure": true,
+   "departments": [
+    "문화체육관광국 문화유산과"
+   ]
+  },
+  "충청남도 서산시": {
+   "sure": false,
+   "departments": [
+    "복지문화국 문화예술과"
+   ]
+  },
+  "충청남도 논산시": {
+   "sure": false,
+   "departments": [
+    "문화환경국 문화예술과"
+   ]
+  },
+  "충청남도 금산군": {
+   "sure": false,
+   "departments": [
+    "문화예술과"
+   ]
+  },
+  "충청남도 부여군": {
+   "sure": true,
+   "departments": [
+    "문화체육복지국 문화유산과"
+   ]
+  },
+  "충청남도 서천군": {
+   "sure": false,
+   "departments": [
+    "경제산업국 문화체육과"
+   ]
+  },
+  "충청남도 청양군": {
+   "sure": false,
+   "departments": [
+    "문화체육과"
+   ]
+  },
+  "충청남도 홍성군": {
+   "sure": true,
+   "departments": [
+    "문화복지국 문화유산과"
+   ]
+  },
+  "충청남도 예산군": {
+   "sure": false,
+   "departments": [
+    "문화체육과"
+   ]
+  },
+  "충청남도 태안군": {
+   "sure": false,
+   "departments": [
+    "경제문화복지국 문화예술과"
+   ]
+  },
+  "전북특별자치도 전주시": {
+   "sure": true,
+   "departments": [
+    "문화체육관광국 국가유산관리과"
+   ]
+  },
+  "전북특별자치도 군산시": {
+   "sure": false,
+   "departments": [
+    "문화관광국 문화예술과"
+   ]
+  },
+  "전북특별자치도 익산시": {
+   "sure": true,
+   "departments": [
+    "경제관광국 문화유산과",
+    "문화교육국 문화유산과"
+   ]
+  },
+  "전북특별자치도 정읍시": {
+   "sure": true,
+   "departments": [
+    "문화행정국 동학유산과"
+   ]
+  },
+  "전북특별자치도 남원시": {
+   "sure": false,
+   "departments": [
+    "문화관광교육국 문화예술과"
+   ]
+  },
+  "전북특별자치도 김제시": {
+   "sure": false,
+   "departments": [
+    "자치행정국 문화관광과"
+   ]
+  },
+  "전북특별자치도 완주군": {
+   "sure": false,
+   "departments": [
+    "문화관광복지국 문화역사과"
+   ]
+  },
+  "전북특별자치도 진안군": {
+   "sure": false,
+   "departments": [
+    "행정복지국 문화체육과"
+   ]
+  },
+  "전북특별자치도 무주군": {
+   "sure": false,
+   "departments": [
+    "행정복지국 태권문화과"
+   ]
+  },
+  "전북특별자치도 장수군": {
+   "sure": false,
+   "departments": [
+    "행정복지국 문화체육과"
+   ]
+  },
+  "전북특별자치도 임실군": {
+   "sure": false,
+   "departments": [
+    "문화관광국 문화체육과"
+   ]
+  },
+  "전북특별자치도 순창군": {
+   "sure": false,
+   "departments": [
+    "행정복지국 문화관광과"
+   ]
+  },
+  "전북특별자치도 고창군": {
+   "sure": true,
+   "departments": [
+    "관광복지국 세계유산과"
+   ]
+  },
+  "전북특별자치도 부안군": {
+   "sure": false,
+   "departments": [
+    "관광복지국 문화예술과"
+   ]
+  },
+  "경상북도 포항시": {
+   "sure": false,
+   "departments": [
+    "자치행정국 문화예술과"
+   ]
+  },
+  "경상북도 경주시": {
+   "sure": true,
+   "departments": [
+    "문화관광국 문화유산과"
+   ]
+  },
+  "경상북도 안동시": {
+   "sure": true,
+   "departments": [
+    "관광문화국 문화유산과"
+   ]
+  },
+  "경상북도 구미시": {
+   "sure": false,
+   "departments": [
+    "문화체육관광국 문화예술과"
+   ]
+  },
+  "경상북도 영주시": {
+   "sure": false,
+   "departments": [
+    "문화복지국 문화예술과"
+   ]
+  },
+  "경상북도 영천시": {
+   "sure": false,
+   "departments": [
+    "문화관광복지국 문화예술과"
+   ]
+  },
+  "경상북도 상주시": {
+   "sure": false,
+   "departments": [
+    "행정복지국 문화예술과"
+   ]
+  },
+  "경상북도 문경시": {
+   "sure": false,
+   "departments": [
+    "문화관광농업국 문화예술과"
+   ]
+  },
+  "경상북도 경산시": {
+   "sure": false,
+   "departments": [
+    "교육문화국 문화관광과"
+   ]
+  },
+  "대구광역시 군위군": {
+   "sure": false,
+   "departments": [
+    "문화관광과"
+   ]
+  },
+  "경상북도 의성군": {
+   "sure": false,
+   "departments": [
+    "관광경제농업국 관광문화과"
+   ]
+  },
+  "경상북도 청송군": {
+   "sure": false,
+   "departments": [
+    "문화경제과"
+   ]
+  },
+  "경상북도 영양군": {
+   "sure": false,
+   "departments": [
+    "농림관광국 문화관광과"
+   ]
+  },
+  "경상북도 영덕군": {
+   "sure": false,
+   "departments": [
+    "문화관광과"
+   ]
+  },
+  "경상북도 청도군": {
+   "sure": false,
+   "departments": [
+    "행정복지국 문화관광과"
+   ]
+  },
+  "경상북도 고령군": {
+   "sure": true,
+   "departments": [
+    "문화유산과"
+   ]
+  },
+  "경상북도 성주군": {
+   "sure": false,
+   "departments": [
+    "문화예술과"
+   ]
+  },
+  "경상북도 칠곡군": {
+   "sure": false,
+   "departments": [
+    "관광경제국 문화관광과"
+   ]
+  },
+  "경상북도 예천군": {
+   "sure": false,
+   "departments": [
+    "행정문화복지국 문화관광과"
+   ]
+  },
+  "경상북도 봉화군": {
+   "sure": false,
+   "departments": [
+    "문화관광과"
+   ]
+  },
+  "경상북도 울진군": {
+   "sure": false,
+   "departments": [
+    "관광경제국 문화관광과"
+   ]
+  },
+  "경상북도 울릉군": {
+   "sure": false,
+   "departments": [
+    "문화체육과"
+   ]
+  },
+  "경상남도 진주시": {
+   "sure": true,
+   "departments": [
+    "문화관광국 문화유산과"
+   ]
+  },
+  "경상남도 통영시": {
+   "sure": false,
+   "departments": [
+    "문화경제복지국 문화예술과"
+   ]
+  },
+  "경상남도 사천시": {
+   "sure": false,
+   "departments": [
+    "관광해양국 문화예술과"
+   ]
+  },
+  "경상남도 김해시": {
+   "sure": true,
+   "departments": [
+    "문화관광국 문화유산과"
+   ]
+  },
+  "경상남도 밀양시": {
+   "sure": false,
+   "departments": [
+    "문화복지국 문화예술과"
+   ]
+  },
+  "경상남도 거제시": {
+   "sure": false,
+   "departments": [
+    "문화관광국 문화예술과"
+   ]
+  },
+  "경상남도 양산시": {
+   "sure": false,
+   "departments": [
+    "문화관광체육국 문화예술과"
+   ]
+  },
+  "경상남도 의령군": {
+   "sure": false,
+   "departments": [
+    "경제문화국 문화관광과"
+   ]
+  },
+  "경상남도 함안군": {
+   "sure": true,
+   "departments": [
+    "행정국 세계유산관광과"
+   ]
+  },
+  "경상남도 창녕군": {
+   "sure": false,
+   "departments": [
+    "관광환경국 문화예술과"
+   ]
+  },
+  "경상남도 고성군": {
+   "sure": false,
+   "departments": [
+    "문화환경국 문화예술과"
+   ]
+  },
+  "경상남도 남해군": {
+   "sure": false,
+   "departments": [
+    "주민생활관광국 문화관광과"
+   ]
+  },
+  "경상남도 하동군": {
+   "sure": false,
+   "departments": [
+    "문화환경국 문화체육과"
+   ]
+  },
+  "경상남도 산청군": {
+   "sure": false,
+   "departments": [
+    "항노화관광국 문화체육과"
+   ]
+  },
+  "경상남도 함양군": {
+   "sure": false,
+   "departments": [
+    "행정국 문화체육과"
+   ]
+  },
+  "경상남도 거창군": {
+   "sure": false,
+   "departments": [
+    "경제복지국 문화예술과"
+   ]
+  },
+  "경상남도 합천군": {
+   "sure": false,
+   "departments": [
+    "경제문화국 문화예술과"
+   ]
+  },
+  "경기도 화성시": {
+   "sure": true,
+   "departments": [
+    "문화관광국 문화유산과"
+   ]
+  },
+  "경기도 광주시": {
+   "sure": false,
+   "departments": [
+    "교육문화국 문화관광과"
+   ]
+  },
+  "충청북도 증평군": {
+   "sure": false,
+   "departments": [
+    "행정복지국 문화관광과"
+   ]
+  },
+  "경기도 양주시": {
+   "sure": false,
+   "departments": [
+    "경제문화체육국 문화관광과"
+   ]
+  },
+  "경기도 포천시": {
+   "sure": false,
+   "departments": [
+    "문화경제국 문화체육과"
+   ]
+  },
+  "경상남도 창원시": {
+   "sure": true,
+   "departments": [
+    "문화관광체육국 문화유산육성과"
+   ]
+  },
+  "충청남도 당진시": {
+   "sure": false,
+   "departments": [
+    "문화복지국 문화예술과"
+   ]
+  },
+  "세종특별자치시": {
+   "sure": true,
+   "departments": [
+    "문화체육관광국 문화유산과"
+   ]
+  },
+  "경기도 여주시": {
+   "sure": false,
+   "departments": [
+    "문화복지국 문화예술과"
+   ]
+  },
+  "충청북도 청주시": {
+   "sure": true,
+   "departments": [
+    "문화체육관광국 문화유산과"
+   ]
+  },
+  "전남광주통합특별시 목포시": {
+   "sure": true,
+   "departments": [
+    "도시공원국 도시유산과"
+   ]
+  },
+  "전남광주통합특별시 여수시": {
+   "sure": true,
+   "departments": [
+    "문화관광체육국 문화유산과"
+   ]
+  },
+  "전남광주통합특별시 순천시": {
+   "sure": true,
+   "departments": [
+    "문화관광국 국가유산과"
+   ]
+  },
+  "전남광주통합특별시 나주시": {
+   "sure": false,
+   "departments": [
+    "관광문화녹지국 문화예술과"
+   ]
+  },
+  "전남광주통합특별시 광양시": {
+   "sure": false,
+   "departments": [
+    "관광문화환경국 문화예술과"
+   ]
+  },
+  "전남광주통합특별시 동구": {
+   "sure": false,
+   "departments": [
+    "인문문화국 문화예술체육과"
+   ]
+  },
+  "전남광주통합특별시 서구": {
+   "sure": false,
+   "departments": [
+    "문화경제국 문화예술과"
+   ]
+  },
+  "전남광주통합특별시 남구": {
+   "sure": false,
+   "departments": [
+    "문화환경국 문화관광과"
+   ]
+  },
+  "전남광주통합특별시 북구": {
+   "sure": false,
+   "departments": [
+    "문화교육국 문화예술과"
+   ]
+  },
+  "전남광주통합특별시 광산구": {
+   "sure": false,
+   "departments": [
+    "문화교육국 문화예술과"
+   ]
+  },
+  "전남광주통합특별시 담양군": {
+   "sure": false,
+   "departments": [
+    "행정국 문화체육과"
+   ]
+  },
+  "전남광주통합특별시 곡성군": {
+   "sure": false,
+   "departments": [
+    "문화체육과"
+   ]
+  },
+  "전남광주통합특별시 고흥군": {
+   "sure": false,
+   "departments": [
+    "문화체육과"
+   ]
+  },
+  "전남광주통합특별시 보성군": {
+   "sure": false,
+   "departments": [
+    "문화관광과"
+   ]
+  },
+  "전남광주통합특별시 화순군": {
+   "sure": true,
+   "departments": [
+    "문화유산과"
+   ]
+  },
+  "전남광주통합특별시 강진군": {
+   "sure": false,
+   "departments": [
+    "관광체육국 문화관광과"
+   ]
+  },
+  "전남광주통합특별시 해남군": {
+   "sure": false,
+   "departments": [
+    "문화예술과"
+   ]
+  },
+  "전남광주통합특별시 영암군": {
+   "sure": false,
+   "departments": [
+    "문화복지국 문화예술과"
+   ]
+  },
+  "전남광주통합특별시 무안군": {
+   "sure": false,
+   "departments": [
+    "문화예술과"
+   ]
+  },
+  "전남광주통합특별시 함평군": {
+   "sure": false,
+   "departments": [
+    "문화체육과"
+   ]
+  },
+  "전남광주통합특별시 영광군": {
+   "sure": false,
+   "departments": [
+    "문화관광과"
+   ]
+  },
+  "전남광주통합특별시 완도군": {
+   "sure": false,
+   "departments": [
+    "문화예술과"
+   ]
+  },
+  "전남광주통합특별시 진도군": {
+   "sure": false,
+   "departments": [
+    "문화예술과"
+   ]
+  },
+  "전남광주통합특별시 신안군": {
+   "sure": true,
+   "departments": [
+    "문화예술관광국 세계유산과"
+   ]
+  },
+  "제주특별자치도 제주시": {
+   "sure": false,
+   "departments": [
+    "문화관광체육국 문화예술과"
+   ]
+  },
+  "제주특별자치도 서귀포시": {
+   "sure": false,
+   "departments": [
+    "문화관광체육국 문화예술과"
+   ]
+  }
+ }
+}

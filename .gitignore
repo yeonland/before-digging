@@ -5,3 +5,5 @@
 node_modules
 law-changes.md
 health-report.md
+data/*.zip
+data/*.txt

@@ -913,20 +913,87 @@
             return /세종/.test(sido) || !sigungu ? sido : `${sido} ${sigungu}`;
         }
 
-        // 관할 시·군·구 문화유산 담당 부서 찾기 (전국 담당 부서 목록이 공개돼 있지 않아 검색과 110 안내)
+        // 시·군·구 문화유산 담당 부서 이름 (scripts/update-departments.mjs로 행정표준코드 기관코드에서 만듦)
+        let departmentData = null;
+        fetch('data/departments.json')
+            .then(response => response.ok ? response.json() : null)
+            .then(data => {
+                departmentData = data;
+                if (data && lastParcelResult && !resultPanel.hidden) renderGuidance();
+            })
+            .catch(() => {});
+
+        // 기관코드 자료와 주소의 시·도 이름이 다를 수 있어 맞춤 (예: 2026년 전남·광주 통합)
+        const SIDO_ALIASES = {
+            전라남도: '전남광주통합특별시',
+            광주광역시: '전남광주통합특별시',
+            강원도: '강원특별자치도',
+            전라북도: '전북특별자치도'
+        };
+
+        function findDepartment(district) {
+            if (!departmentData || !district) return null;
+            const districts = departmentData.districts;
+            const [sido, sigungu] = district.split(' ');
+            const keys = [district, sigungu ? `${SIDO_ALIASES[sido] || sido} ${sigungu}` : null].filter(Boolean);
+            const key = keys.find(name => districts[name]);
+            if (key) return { key, ...districts[key] };
+
+            // 시·도 이름이 또 바뀐 경우: 시·군·구 이름이 하나뿐이면 그것으로
+            const matches = sigungu ? Object.keys(districts).filter(name => name.endsWith(` ${sigungu}`)) : [];
+            return matches.length === 1 ? { key: matches[0], ...districts[matches[0]] } : null;
+        }
+
+        // 부서가 속한 청 이름: 종로구 → 종로구청, 세종특별자치시 → 세종특별자치시청
+        function officeName(district) {
+            const name = district.split(' ').pop();
+            return /(시|군|구)$/.test(name) ? `${name}청` : name;
+        }
+
+        // 관할 시·군·구 문화유산 담당 부서 (부서 이름은 행정표준코드, 전화번호는 자료에 없어 검색·110 안내)
         function contactSection(address) {
             const district = addressDistrict(address);
             if (!district) return '';
-            const query = encodeURIComponent(`${district} 문화유산 담당 부서 전화번호`);
+
+            const found = findDepartment(district);
+            const office = officeName(district);
+            const deptName = path => path.split(' ').pop();
+            const deptLabel = path => {
+                const parts = path.split(' ');
+                return `${escapeHtml(office)} <b>${escapeHtml(parts.pop())}</b>${parts.length ? ` <span style="color: #666;">(${escapeHtml(parts.join(' '))})</span>` : ''}`;
+            };
+
+            let title;
+            let body;
+            let searchWord;
+            if (found && found.sure) {
+                title = `관할 부서: ${found.departments.map(deptLabel).join(', ')}`;
+                body = '위 안내에서 "관할 시·군·구에 문의"는 이 부서를 말해요.';
+                searchWord = `${office} ${deptName(found.departments[0])} 전화번호`;
+            } else if (found) {
+                title = `관할 부서(추정): ${found.departments.map(deptLabel).join(', ')}`;
+                body = `${escapeHtml(office)}에는 이름에 '문화유산'이 들어간 부서가 없어서, 문화 업무 부서를 찾았어요. 이 부서 안의 문화유산 담당 팀이 맡는 경우가 많지만, 다른 부서일 수도 있으니 전화할 때 문화유산(현상변경·매장유산) 담당인지 확인해 보세요.`;
+                searchWord = `${office} ${deptName(found.departments[0])} 전화번호`;
+            } else {
+                title = `관할: ${escapeHtml(district)} 문화유산 담당 부서`;
+                body = '부서 이름을 찾지 못했어요. 지자체마다 부서 이름이 달라요(문화유산과, 문화예술과, 문화관광과 등).';
+                searchWord = `${district} 문화유산 담당 부서 전화번호`;
+            }
+
+            const source = found && departmentData.baseDate
+                ? `<p class="disclaimer" style="margin-top: 4px;">부서 이름: 행정안전부 행정표준코드 기관코드 (${escapeHtml(departmentData.baseDate)} 기준). 조직 개편으로 바뀌었을 수 있어요.</p>`
+                : '';
+
             return `
                 <h4>문의처</h4>
                 <div class="step info">
-                    <div class="step-title">관할: ${escapeHtml(district)} 문화유산 담당 부서</div>
-                    <div>위 안내에서 "관할 시·군·구에 문의"는 이 부서를 말해요. 지자체마다 부서 이름이 달라요(문화유산과, 문화예술과, 문화관광과 등).</div>
+                    <div class="step-title">${title}</div>
+                    <div>${body}</div>
                     <ul class="step-items">
-                        <li><a class="survey-link" href="https://search.naver.com/search.naver?query=${query}" target="_blank" rel="noopener">${escapeHtml(district)} 문화유산 담당 부서 찾기 ↗</a></li>
+                        <li><a class="survey-link" href="https://search.naver.com/search.naver?query=${encodeURIComponent(searchWord)}" target="_blank" rel="noopener">${found ? '전화번호 찾기' : `${escapeHtml(district)} 문화유산 담당 부서 찾기`} ↗</a></li>
                         <li>찾기 어려우면 정부민원안내콜센터 ☎ <a class="survey-link" href="tel:110">110</a>에 "${escapeHtml(district)} 문화유산 담당 부서"를 물어보면 연결해 줘요.</li>
                     </ul>
+                    ${source}
                 </div>`;
         }
 
