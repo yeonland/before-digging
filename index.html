@@ -402,6 +402,19 @@
             color: #666;
         }
 
+        /* 결과 패널의 걸친 영역 전체 목록 */
+        .overlap-list {
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        .overlap-list summary {
+            cursor: pointer;
+        }
+        .more-link {
+            color: #1d72b8;
+            font-size: 12px;
+        }
+
         /* 결과 공유: 링크 복사, PDF 저장 */
         .share-bar {
             display: flex;
@@ -1291,12 +1304,24 @@
             return [...byName.values()];
         }
 
-        function showParcelResult(marker, data) {
-            const parcel = data.parcel;
-            const items = [
+        // 필지(부지)에 걸친 국가유산 구역·문화유적 분포 범위, 많이 겹친 순
+        function overlapItems(data) {
+            return [
                 ...(data.zones || []).map(zone => ({ name: zone.name, type: window.isNaturalZone(zone) ? `${zone.type} · 자연유산` : zone.type, natural: window.isNaturalZone(zone), overlapArea: zone.overlapArea, overlapRatio: zone.overlapRatio, edgeOnly: zone.edgeOnly })),
                 ...dedupeSites(data.sites || []).map(site => ({ name: site.name || '이름 없음', type: '문화유적 분포 범위', overlapArea: site.overlapArea, overlapRatio: site.overlapRatio, edgeOnly: site.edgeOnly }))
             ].sort((a, b) => b.overlapArea - a.overlapArea);
+        }
+
+        // 이름이 없는 구역(역사문화환경 보존지역 등)은 종류만 표시
+        function overlapLabel(item) {
+            return item.name
+                ? `${escapeHtml(item.name)} <span style="color: #666;">(${escapeHtml(item.type)})</span>`
+                : escapeHtml(item.type);
+        }
+
+        function showParcelResult(marker, data) {
+            const parcel = data.parcel;
+            const items = overlapItems(data);
 
             const realItems = items.filter(item => !item.edgeOnly);
             const edgeItems = items.filter(item => item.edgeOnly);
@@ -1308,16 +1333,15 @@
                     <span style="color: #666;">지목·지번 ${escapeHtml(parcel.jibun)} · 필지 면적 ${formatArea(parcel.area)}</span>
                 </p>`;
 
-            // 이름이 없는 구역(역사문화환경 보존지역 등)은 종류만 표시
-            const itemLabel = item => item.name
-                ? `${escapeHtml(item.name)} <span style="color: #666;">(${escapeHtml(item.type)})</span>`
-                : escapeHtml(item.type);
-            const listItem = item => `<li>${itemLabel(item)} · ${formatArea(item.overlapArea)} (${item.overlapRatio}%)</li>`;
-            // 팝업이 지도를 너무 가리지 않게 많이 겹친 3개만 보여주고 나머지는 건수로 표시
+            const listItem = item => `<li>${overlapLabel(item)} · ${formatArea(item.overlapArea)} (${item.overlapRatio}%)</li>`;
+            // 팝업이 지도를 너무 가리지 않게 많이 겹친 3개만 보여주고, 나머지는 결과 패널의 전체 목록으로 보냄
             const POPUP_ITEM_LIMIT = 3;
             const hiddenCount = realItems.length - POPUP_ITEM_LIMIT;
+            const moreLink = hiddenCount > 0
+                ? `<li style="list-style: none;"><a href="#" class="more-link" onclick="scrollToOverlaps(); return false;">외 ${hiddenCount}건 모두 보기 ▼</a></li>`
+                : '';
             const realList = realItems.length > 0
-                ? `<ul style="margin: 5px 0 0 0; padding-left: 18px; font-size: 13px;">${realItems.slice(0, POPUP_ITEM_LIMIT).map(listItem).join('')}${hiddenCount > 0 ? `<li style="list-style: none; color: #666;">외 ${hiddenCount}건</li>` : ''}</ul>`
+                ? `<ul style="margin: 5px 0 0 0; padding-left: 18px; font-size: 13px;">${realItems.slice(0, POPUP_ITEM_LIMIT).map(listItem).join('')}${moreLink}</ul>`
                 : '';
             const edgeList = edgeItems.length > 0
                 ? `<p style="margin: 6px 0 0 0; font-size: 12px; color: #666;">경계에만 걸침 (도면 오차일 수 있음): ${edgeItems.map(item => escapeHtml(item.name || item.type)).join(', ')}</p>`
@@ -1378,6 +1402,39 @@
             resultPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
+        // 팝업의 "외 N건 모두 보기": 결과 패널의 걸친 영역 전체 목록을 펼치고 그쪽으로 이동
+        function scrollToOverlaps() {
+            const section = document.getElementById('overlap-list');
+            if (!section) return scrollToPanel();
+            section.open = true;
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // 결과 패널의 걸친 영역 전체 목록 (3건 이하면 팝업에 다 보이므로 접어 둠)
+        function renderOverlapList(data, areaName) {
+            const items = overlapItems(data);
+            if (items.length === 0) return '';
+
+            const rows = items.map(item => `
+                <tr>
+                    <td>${overlapLabel(item)}${item.edgeOnly ? ' <span style="color: #666;">· 경계에만 걸침</span>' : ''}</td>
+                    <td class="num">${formatArea(item.overlapArea)}</td>
+                    <td class="num">${item.overlapRatio}%</td>
+                </tr>`).join('');
+
+            return `
+                <details class="overlap-list" id="overlap-list"${items.length > 3 ? ' open' : ''}>
+                    <summary><b>${escapeHtml(areaName)}에 걸친 영역 ${items.length}건</b></summary>
+                    <div class="site-table-wrap">
+                        <table class="site-table">
+                            <thead><tr><th>이름 (종류)</th><th>겹친 면적</th><th>비율</th></tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>
+                    <p class="disclaimer" style="margin-top: 0;">많이 겹친 순이에요. 같은 이름의 문화유적이 여러 번 등록된 경우는 하나만 보여줘요.</p>
+                </details>`;
+        }
+
         // 진단 결과 패널 (guidance.js의 규칙으로 해야 할 일과 비용 안내 생성)
         const resultPanel = document.getElementById('result-panel');
         let lastParcelResult = null;
@@ -1421,6 +1478,7 @@
                 </div>
                 <div id="share-fallback"></div>
                 ${renderRisk(window.buildRisk(data))}
+                ${renderOverlapList(data, data.target === 'site' ? '부지' : '필지')}
                 ${options.extra || ''}
                 <div class="inputs">
                     <label>공사 종류 <select id="work-type">${workOptions}</select></label>
