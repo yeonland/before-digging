@@ -401,6 +401,83 @@
             font-size: 12px;
             color: #666;
         }
+
+        /* 결과 공유: 링크 복사, PDF 저장 */
+        .share-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            margin: 8px 0 4px 0;
+        }
+        .share-bar .go-panel {
+            margin-top: 0;
+        }
+        .share-status {
+            font-size: 12px;
+            color: #2a9d8f;
+        }
+        .share-link-input {
+            width: 100%;
+            margin-top: 4px;
+            padding: 4px;
+            font-size: 12px;
+        }
+        .print-only {
+            display: none;
+        }
+
+        /* 인쇄·PDF 저장: 지도와 버튼을 빼고 결과 패널만 */
+        @media print {
+            body {
+                margin: 0;
+            }
+            #map,
+            #search-box,
+            .share-bar,
+            #result-panel .go-panel {
+                display: none !important;
+            }
+            #result-panel {
+                max-width: none;
+                margin: 0 !important;
+                padding: 0;
+                border: none;
+                font-size: 12px;
+            }
+            #result-panel .print-only {
+                display: block;
+                margin-bottom: 10px;
+                padding-bottom: 8px;
+                border-bottom: 2px solid #333;
+                font-size: 12px;
+            }
+            .print-only .print-title {
+                font-size: 18px;
+                font-weight: bold;
+            }
+            .print-only .print-link {
+                word-break: break-all;
+            }
+            .site-table-wrap {
+                overflow: visible;
+            }
+            .risk-box,
+            .step,
+            .site-table tr {
+                break-inside: avoid;
+            }
+            /* 위험도·안내 색이 인쇄에서 빠지지 않게 */
+            .risk-box,
+            .step,
+            .survey-method {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            #data-source {
+                margin: 10px 0 0 0 !important;
+            }
+        }
     </style>
 </head>
 <body>    
@@ -639,6 +716,11 @@
         // 지도 위 핀은 하나만 유지 (내 위치, 검색, 클릭 중 마지막 것만 표시)
         let activeMarker = null;
         let parcelHighlight = null;
+        // 결과 공유 상태: 링크에 담을 위치, 진단 시각, 공유 링크로 열었을 때 채울 입력값
+        let shareLocation = null;
+        let panelLocation = null; // 지금 결과 패널이 보여주는 위치 (새 진단이 끝나기 전엔 이전 위치)
+        let diagnosedAt = null;
+        let sharedInputs = null;
 
         function placeMarker(latlng) {
             if (activeMarker) map.removeLayer(activeMarker);
@@ -1114,10 +1196,13 @@
                     ${data.site.parcelsTruncated ? '<p class="disclaimer">※ 필지가 너무 많아 일부만 진단했어요.</p>' : ''}
                 </details>`;
 
+            shareLocation = null;
+            updateShareUrl();
             showGuidancePanel(siteData, {
                 title: '도면 사업부지 진단 결과 · 해야 할 일',
                 areaLabel: '부지 면적',
-                extra: table
+                extra: table,
+                shareable: false
             });
             if (parcelHighlight) map.removeLayer(parcelHighlight);
             parcelHighlight = null;
@@ -1128,7 +1213,7 @@
         function showSiteParcel(index) {
             const item = lastSiteResponse.parcels[index];
             highlightParcel(item.parcel.geometry);
-            showGuidancePanel(item, { back: true });
+            showGuidancePanel(item, { back: true, shareable: false });
             scrollToPanel();
         }
 
@@ -1159,6 +1244,8 @@
             // 응답이 늦게 와도 이 클릭의 핀에만 결과를 넣도록 지역 변수로 보관
             const clickMarker = placeMarker(clickedLatlng);
             clickMarker.bindPopup('필지와 국가유산 데이터 확인 중...', { maxWidth: 320 }).openPopup();
+            shareLocation = clickedLatlng;
+            updateShareUrl();
 
             const query = `lat=${clickedLatlng.lat}&lng=${clickedLatlng.lng}`;
 
@@ -1311,17 +1398,28 @@
             return Number.isFinite(value) && value >= 0 ? value : null;
         }
 
-        // options: title(제목), areaLabel(면적 이름), extra(위험도 아래에 넣을 내용), back(도면 사업부지로 돌아가는 버튼)
+        // options: title(제목), areaLabel(면적 이름), extra(위험도 아래에 넣을 내용), back(도면 사업부지로 돌아가는 버튼),
+        //          shareable(false면 링크 복사 버튼을 빼고 PDF 저장만)
         function showGuidancePanel(data, options = {}) {
             lastParcelResult = data;
+            diagnosedAt = new Date();
+            panelLocation = shareLocation;
+            const shareable = options.shareable !== false && shareLocation !== null;
             const workOptions = WORK_TYPES
                 .map(([value, label]) => `<option value="${value}">${label}</option>`)
                 .join('');
 
             resultPanel.innerHTML = `
+                <div class="print-only" id="print-header"></div>
                 ${options.back ? '<button type="button" class="go-panel" onclick="showSitePanel()">← 도면 사업부지 전체로</button>' : ''}
                 <h3>${escapeHtml(options.title || '진단 결과 · 해야 할 일')}</h3>
                 <p class="panel-sub">${escapeHtml(data.parcel.address)} · ${escapeHtml(options.areaLabel || '필지 면적')} ${formatArea(data.parcel.area)}</p>
+                <div class="share-bar">
+                    ${shareable ? '<button type="button" class="go-panel" onclick="copyShareLink()">🔗 링크 복사</button>' : ''}
+                    <button type="button" class="go-panel" onclick="printResult()">🖨️ PDF로 저장·인쇄</button>
+                    <span class="share-status" id="share-status" role="status"></span>
+                </div>
+                <div id="share-fallback"></div>
                 ${renderRisk(window.buildRisk(data))}
                 ${options.extra || ''}
                 <div class="inputs">
@@ -1332,6 +1430,14 @@
                 <div id="guidance-body"></div>
             `;
             resultPanel.hidden = false;
+
+            // 공유 링크로 열었으면 링크에 담긴 공사 종류·면적을 채움 (처음 한 번만)
+            if (sharedInputs) {
+                document.getElementById('work-type').value = sharedInputs.work;
+                if (sharedInputs.area !== null) document.getElementById('land-area').value = sharedInputs.area;
+                if (sharedInputs.floor !== null) document.getElementById('floor-area').value = sharedInputs.floor;
+                sharedInputs = null;
+            }
 
             resultPanel.querySelectorAll('select, input').forEach(element => {
                 element.addEventListener('input', renderGuidance);
@@ -1379,6 +1485,7 @@
                 landArea: readNumber('land-area'),
                 floorArea: workType === 'business' ? readNumber('floor-area') : null
             });
+            updateShareUrl();
 
             const steps = guidance.steps.map(step => `
                 <div class="step ${step.level}">
@@ -1498,6 +1605,116 @@
                 `);
             }
         }
+
+        // ---------------------------------------------------------------
+        // 결과 공유
+        // - 링크: 진단한 위치(+ 공사 종류·면적 입력)를 주소창에 담음. 결과를 저장하지 않고, 열 때 그 시점 데이터로 다시 진단
+        // - PDF: 브라우저 인쇄로 결과 패널만 출력 (펼쳐보기는 모두 펼침, 진단 일시·링크·출처 포함)
+        // ---------------------------------------------------------------
+        function buildShareUrl() {
+            const url = new URL(window.location.pathname, window.location.origin);
+            if (!shareLocation) return url.toString();
+
+            url.searchParams.set('lat', shareLocation.lat.toFixed(6));
+            url.searchParams.set('lng', shareLocation.lng.toFixed(6));
+
+            const workInput = document.getElementById('work-type');
+            // 입력값은 패널이 지금 위치의 결과일 때만 담음 (다른 곳을 눌러 진단 중이면 이전 입력을 섞지 않음)
+            if (workInput && panelLocation === shareLocation && lastParcelResult && lastParcelResult.parcel) {
+                if (workInput.value) url.searchParams.set('work', workInput.value);
+                // 사업 면적은 필지 면적과 다르게 고쳤을 때만 담음
+                const area = readNumber('land-area');
+                if (area !== null && area !== Math.round(lastParcelResult.parcel.area)) url.searchParams.set('area', area);
+                const floor = readNumber('floor-area');
+                if (workInput.value === 'business' && floor !== null) url.searchParams.set('floor', floor);
+            }
+            return url.toString();
+        }
+
+        // 주소창을 지금 결과의 링크로 바꿈 (뒤로 가기 기록은 남기지 않음)
+        function updateShareUrl() {
+            const url = buildShareUrl();
+            if (url !== window.location.href) history.replaceState(null, '', url);
+        }
+
+        function setShareStatus(message) {
+            const status = document.getElementById('share-status');
+            if (status) status.textContent = message;
+        }
+
+        async function copyShareLink() {
+            const url = buildShareUrl();
+
+            // 휴대폰은 공유 창(카카오톡, 문자 등)을 바로 띄움
+            if (navigator.share && window.matchMedia('(pointer: coarse)').matches) {
+                try {
+                    await navigator.share({ title: '땅파기전 진단 결과', url });
+                    return;
+                } catch (error) {
+                    if (error.name === 'AbortError') return;
+                }
+            }
+
+            try {
+                await navigator.clipboard.writeText(url);
+                setShareStatus('링크를 복사했어요. 열면 그때의 데이터로 다시 진단해요.');
+            } catch {
+                // 복사가 막힌 브라우저: 링크를 보여주고 직접 복사하게 함
+                const fallback = document.getElementById('share-fallback');
+                fallback.innerHTML = `<input class="share-link-input" type="text" readonly value="${escapeHtml(url)}" aria-label="공유 링크">`;
+                fallback.querySelector('input').select();
+                setShareStatus('자동 복사가 안 돼요. 아래 링크를 복사해 주세요.');
+            }
+        }
+
+        function printResult() {
+            window.print();
+        }
+
+        // 인쇄 직전: 머리글을 채우고 펼쳐보기를 모두 펼침, 인쇄 뒤에 원래대로
+        let detailsBeforePrint = [];
+        window.addEventListener('beforeprint', () => {
+            const header = document.getElementById('print-header');
+            if (!header || resultPanel.hidden) return;
+
+            const time = (diagnosedAt || new Date()).toLocaleString('ko-KR');
+            header.innerHTML = `
+                <div class="print-title">땅파기전 · 문화유산 사전 확인 결과</div>
+                <div>진단 일시: ${escapeHtml(time)}</div>
+                ${shareLocation ? `<div class="print-link">다시 보기: ${escapeHtml(buildShareUrl())}</div>` : ''}
+                <div>공공데이터는 바뀔 수 있어서, 같은 위치도 나중에 다시 진단하면 결과가 달라질 수 있어요.</div>`;
+
+            detailsBeforePrint = [...resultPanel.querySelectorAll('details')].map(element => [element, element.open]);
+            detailsBeforePrint.forEach(([element]) => { element.open = true; });
+        });
+        window.addEventListener('afterprint', () => {
+            detailsBeforePrint.forEach(([element, open]) => { element.open = open; });
+            detailsBeforePrint = [];
+        });
+
+        // 공유 링크로 열었으면 그 위치를 바로 진단
+        (function openSharedLink() {
+            const params = new URLSearchParams(window.location.search);
+            const lat = Number(params.get('lat'));
+            const lng = Number(params.get('lng'));
+            if (!params.has('lat') || !params.has('lng') || !Number.isFinite(lat) || !Number.isFinite(lng) ||
+                lat < 33 || lat > 39 || lng < 124 || lng > 132) return;
+
+            const number = name => {
+                const value = Number(params.get(name));
+                return params.has(name) && Number.isFinite(value) && value >= 0 ? value : null;
+            };
+            const work = params.get('work') || '';
+            sharedInputs = {
+                work: WORK_TYPES.some(([value]) => value === work) ? work : '',
+                area: number('area'),
+                floor: number('floor')
+            };
+
+            const latlng = L.latLng(lat, lng);
+            map.setView(latlng, 18);
+            diagnose(latlng);
+        })();
     </script>
 </body>
 </html>
