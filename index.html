@@ -1709,7 +1709,36 @@
                 <div class="step info">
                     ${body}
                     ${fromDrawing}
+                    ${boreholeNote(ground)}
                 </div>`;
+        }
+
+        // 주변 시추공의 지반 고도 (참고값). 지반 해발을 모를 때 가장 가까운 값을 넣을 수 있게 함
+        function boreholeNote(ground) {
+            const info = lastParcelResult && lastParcelResult.boreholes;
+            if (!info) return '';
+            if (info.items.length === 0) {
+                return `<div class="survey-report">주변 ${info.radius}m 안에 지반 고도를 알 수 있는 시추공 자료가 없어요.</div>`;
+            }
+            const rows = info.items
+                .map(item => `<li>${item.distance === 0 ? '<b>경계 안</b>' : `약 ${item.distance}m`} · 지반 고도 ${item.elevation}m <span style="color: #666;">(시추 깊이 ${item.depth}m)</span></li>`)
+                .join('');
+            const nearest = info.items[0];
+            const useButton = ground === nearest.elevation
+                ? ''
+                : `<button type="button" class="go-panel" onclick="useBoreholeElevation(${nearest.elevation})">가장 가까운 시추공 고도(${nearest.elevation}m) 넣기</button>`;
+            return `
+                <div class="survey-report" style="margin-top: 8px;"><b>주변 시추공 (${info.radius}m 안, 가까운 순)</b></div>
+                <ul class="step-items">${rows}</ul>
+                ${useButton}
+                <p class="disclaimer" style="margin-top: 4px;">국토교통부 지반정보 시추공 자료(${escapeHtml(info.baseDate)} 수정)예요. 측량값이 아니고 시추했을 때의 지반이라, 그 뒤에 흙을 쌓거나 깎았으면 달라요. 정확한 값은 측량도의 현황 지반고를 쓰세요.</p>`;
+        }
+
+        function useBoreholeElevation(value) {
+            const input = document.getElementById('ground-level');
+            if (!input) return;
+            input.value = value;
+            renderGuidance();
         }
 
         function renderGuidance() {

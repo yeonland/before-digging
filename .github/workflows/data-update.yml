@@ -1,0 +1,72 @@
+# 파일로 넣어 둔 공공데이터 자동 갱신: 매달 1일 오전 9시(한국 시간)
+# - 시추공(공공데이터포털)과 조사기관 연락처(한국문화유산협회)는 새로 받아서, 바뀌었을 때만 저장
+# - 담당 부서(행정표준코드 기관코드)는 브라우저에서만 내려받을 수 있어서, 조직 개편이 많은 1월·7월에 갱신 알림 이슈만 만듦
+# - 받기에 실패하면 이슈로 알림 (해외에서 접속을 막는 사이트일 수 있음)
+name: 자료 자동 갱신
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '22'
+
+      - name: 좌표 변환 라이브러리 설치
+        run: npm i --no-save proj4@2.11.0
+
+      - name: 시추공 자료 갱신
+        id: boreholes
+        continue-on-error: true
+        run: node scripts/update-boreholes.mjs
+
+      - name: 조사기관 연락처 갱신
+        id: agencies
+        continue-on-error: true
+        run: node --use-system-ca scripts/update-agencies.mjs
+
+      - name: 바뀐 자료 저장
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/boreholes.bin.gz data/boreholes-meta.json data/agencies.json
+          if git diff --cached --quiet; then
+            echo "바뀐 자료가 없습니다."
+          else
+            git commit -m "공공데이터 자료 갱신 (자동)"
+            git push
+          fi
+
+      - name: 실패하면 이슈 만들기
+        if: steps.boreholes.outcome == 'failure' || steps.agencies.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "⚠️ 자료 자동 갱신 실패 ($(TZ=Asia/Seoul date +%Y-%m-%d))" \
+            --body "$(printf '시추공: %s\n조사기관 연락처: %s\n\n실행 기록: %s\n\n해외 접속을 막는 사이트면, 파일을 직접 받아 `node scripts/update-boreholes.mjs 파일.csv`로 갱신해 주세요.' \
+              '${{ steps.boreholes.outcome }}' '${{ steps.agencies.outcome }}' \
+              '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}')"
+
+      - name: 담당 부서 자료 갱신 알림 (1월·7월)
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          month=$(TZ=Asia/Seoul date +%m)
+          if [ "$month" = "01" ] || [ "$month" = "07" ]; then
+            gh issue create \
+              --title "📋 담당 부서 자료 갱신할 때예요 ($(TZ=Asia/Seoul date +%Y-%m))" \
+              --body "$(printf '1월·7월은 지자체 조직 개편이 많은 때예요.\n\n1. https://www.code.go.kr → 코드검색 → 기관코드검색 → \"기관코드 전체자료\" 내려받기\n2. 압축을 풀고 `node scripts/update-departments.mjs \"기관코드 전체자료.txt\" YYYY-MM-DD`\n3. `data/departments.json` 커밋')"
+          fi

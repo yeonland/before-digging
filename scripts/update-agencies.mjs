@@ -2,7 +2,7 @@
 // - 조사 이력의 보고서 이름 앞에 나오는 기관명과 맞춰 전화번호·홈페이지를 안내하는 데 씀
 // - 기관 연락처는 바뀔 수 있어서 가끔 다시 실행해 갱신
 // 사용: node scripts/update-agencies.mjs
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 
 const SOURCE_URL = 'https://www.kaah.kr/asslist';
 const OUTPUT_FILE = new URL('../data/agencies.json', import.meta.url);
@@ -39,6 +39,13 @@ const agencies = [...table.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)]
 
 if (agencies.length < 50) {
     throw new Error(`기관이 ${agencies.length}곳뿐이에요. 페이지 구조가 바뀌었는지 확인하세요.`);
+}
+
+// 목록이 그대로면 파일을 건드리지 않음 (매달 자동 갱신 때 날짜만 바뀌는 커밋이 생기지 않게)
+const previous = await readFile(OUTPUT_FILE, 'utf8').then(JSON.parse).catch(() => null);
+if (previous && JSON.stringify(previous.agencies) === JSON.stringify(agencies)) {
+    console.log('조사기관 목록이 바뀌지 않았어요.');
+    process.exit(0);
 }
 
 await writeFile(OUTPUT_FILE, JSON.stringify({

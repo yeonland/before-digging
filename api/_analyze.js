@@ -21,6 +21,7 @@ const {
     isPointInGeometry
 } = require('./_heritage-gis');
 const { findAgency } = require('./_agencies');
+const { nearbyBoreholes } = require('./_boreholes');
 
 // 이보다 작은 겹침은 무시 (㎡)
 const MIN_OVERLAP_AREA = 1;
@@ -543,6 +544,7 @@ async function analyze(targetFeature, data) {
         surveyStats,
         allowance,
         worldHeritage,
+        boreholes: nearbyBoreholes(targetFeature.geometry),
         overlap: {
             area: roundArea(totalArea),
             ratio: roundArea((totalArea / targetArea) * 100),
