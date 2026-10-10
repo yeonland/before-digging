@@ -15,7 +15,11 @@
         { code: 5174, name: '중부원점 (베셀)', note: '옛 지적도 기준', def: '+proj=tmerc +lat_0=38 +lon_0=127.002890277778 +k=1 +x_0=200000 +y_0=500000 +ellps=bessel +towgs84=-145.907,505.034,685.756,-1.162,2.347,1.592,6.342 +units=m +no_defs' },
         { code: 5176, name: '동부원점 (베셀)', note: '옛 지적도 기준', def: '+proj=tmerc +lat_0=38 +lon_0=129.002890277778 +k=1 +x_0=200000 +y_0=500000 +ellps=bessel +towgs84=-145.907,505.034,685.756,-1.162,2.347,1.592,6.342 +units=m +no_defs' },
         { code: 5173, name: '서부원점 (베셀)', note: '옛 지적도 기준', def: '+proj=tmerc +lat_0=38 +lon_0=125.002890277778 +k=1 +x_0=200000 +y_0=500000 +ellps=bessel +towgs84=-145.907,505.034,685.756,-1.162,2.347,1.592,6.342 +units=m +no_defs' },
-        { code: 5179, name: 'UTM-K', note: '전국 하나의 좌표계 (네이버·국토지리정보원 일부)', def: '+proj=tmerc +lat_0=38 +lon_0=127.5 +k=0.9996 +x_0=1000000 +y_0=2000000 +ellps=GRS80 +units=m +no_defs' }
+        { code: 5179, name: 'UTM-K', note: '전국 하나의 좌표계 (네이버·국토지리정보원 일부)', def: '+proj=tmerc +lat_0=38 +lon_0=127.5 +k=0.9996 +x_0=1000000 +y_0=2000000 +ellps=GRS80 +units=m +no_defs' },
+        // 아래는 SGIS 좌표계 목록(sgis.mods.go.kr 좌표계 코드)에 있는 나머지. 미터 단위가 아니라 mm 변환을 하지 않음(raw)
+        { code: 4326, name: '경위도 (WGS84)', note: 'GPS·구글 지도, EPSG:4166도 같은 값', def: '+proj=longlat +datum=WGS84 +no_defs', raw: true },
+        { code: 4004, name: '경위도 (베셀)', note: '옛 측지계, EPSG:4162', def: '+proj=longlat +ellps=bessel +towgs84=-145.907,505.034,685.756,-1.162,2.347,1.592,6.342 +no_defs', raw: true },
+        { code: 3857, name: '구글 메르카토르', note: '웹 지도 좌표, EPSG:900913', def: '+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +no_defs', raw: true }
     ];
 
     // 좌표가 이보다 크면 mm 단위로 그린 도면으로 보고 1000으로 나눔 (m 단위 측량 좌표는 최대 수백만)
@@ -178,26 +182,52 @@
         return { layers, elevations: readElevations(dxf) };
     }
 
-    function layerCenter(layer) {
+    // 경위도·메르카토르는 숫자가 커도 mm가 아니므로 단위를 바꾸지 않음
+    function scaleFor(crs, layer) {
+        return crs.raw ? 1 : layer.scale;
+    }
+
+    function layerCenter(layer, scale) {
         const points = layer.rings.flat();
-        const xs = points.map(([x]) => x * layer.scale);
-        const ys = points.map(([, y]) => y * layer.scale);
+        const xs = points.map(([x]) => x * scale);
+        const ys = points.map(([, y]) => y * scale);
         return [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2];
     }
 
     // 좌표계마다 레이어 중심이 어디가 되는지 계산 (우리나라 밖이면 뺌)
     function crsCandidates(layer) {
-        const center = layerCenter(layer);
+        // 경위도로 그린 도면(숫자가 360 이하)은 경위도 좌표계만
+        const degrees = layerCenter(layer, 1).every((value) => Math.abs(value) <= 360);
         return CRS_LIST
-            .map((crs) => ({ ...crs, center: window.proj4(crs.def, 'EPSG:4326', center) }))
+            .filter((crs) => /longlat/.test(crs.def) === degrees)
+            .map((crs) => ({ ...crs, center: window.proj4(crs.def, 'EPSG:4326', layerCenter(layer, scaleFor(crs, layer))) }))
             .filter((crs) => inKorea(crs.center));
+    }
+
+    // 좌표 숫자 두 개가 좌표계마다 어디인지 (검색창 좌표 입력용)
+    // 측량에서는 X가 북쪽(세로), Y가 동쪽(가로)이라 지도 순서와 반대인 경우가 많아 두 순서 모두 계산
+    function pointCandidates(first, second) {
+        const found = [];
+        // 둘 다 360 이하면 경위도(도 단위)로만 봄. 미터 좌표로는 원점 바로 옆(바다)이라 뜻이 없음
+        const degrees = Math.abs(first) <= 360 && Math.abs(second) <= 360;
+        CRS_LIST.filter((crs) => /longlat/.test(crs.def) === degrees).forEach((crs) => {
+            [[first, second, false], [second, first, true]].forEach(([x, y, swapped]) => {
+                const center = window.proj4(crs.def, 'EPSG:4326', [x, y]);
+                if (!inKorea(center)) return;
+                // 거의 같은 곳(약 1m 안)이 이미 있으면 하나만 (예: 같은 숫자를 두 순서로 넣었을 때)
+                if (found.some((item) => Math.hypot(item.center[0] - center[0], item.center[1] - center[1]) < 0.00001)) return;
+                found.push({ ...crs, center, swapped });
+            });
+        });
+        return found;
     }
 
     // 고른 좌표계로 레이어의 경계를 경위도 GeoJSON(MultiPolygon)으로 바꿈
     function toGeometry(layer, crsCode) {
         const crs = CRS_LIST.find((item) => item.code === crsCode);
+        const scale = scaleFor(crs, layer);
         const convert = ([x, y]) => {
-            const [lng, lat] = window.proj4(crs.def, 'EPSG:4326', [x * layer.scale, y * layer.scale]);
+            const [lng, lat] = window.proj4(crs.def, 'EPSG:4326', [x * scale, y * scale]);
             return [Math.round(lng * 1e7) / 1e7, Math.round(lat * 1e7) / 1e7];
         };
         const close = (ring) => {
@@ -232,5 +262,5 @@
         return inside;
     }
 
-    window.dxfSite = { CRS_LIST, decodeDxf, readBoundaries, crsCandidates, toGeometry, siteElevation };
+    window.dxfSite = { CRS_LIST, decodeDxf, readBoundaries, crsCandidates, pointCandidates, toGeometry, siteElevation };
 })();

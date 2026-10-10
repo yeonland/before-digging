@@ -503,7 +503,7 @@
             <input
                 type="text"
                 id="address-input"
-                placeholder="지번, 도로명 또는 장소 (예: 경주시 인왕동 815-1)"
+                placeholder="지번, 도로명, 장소 또는 좌표 (예: 경주시 인왕동 815-1)"
             >
             <button id="search-btn">검색</button>
             <button id="dxf-btn" type="button" title="DXF 도면으로 사업부지 전체 진단">도면(DXF)</button>
@@ -841,11 +841,70 @@
             diagnose(latlng);
         }
 
+        // 좌표 입력: "198342.5, 451230.1", "X=451230 Y=198342", "37.5786 126.977" 같은 숫자 두 개
+        // ("815-1" 같은 번지는 숫자 하나로 보고 좌표로 다루지 않음)
+        function parseCoordinates(keyword) {
+            const tokens = keyword.replace(/[XYxy]\s*[=:]?|[()]/g, ' ').trim().split(/[\s,]+/);
+            return tokens.length === 2 && tokens.every(token => /^-?\d+(?:\.\d+)?$/.test(token))
+                ? tokens.map(Number)
+                : null;
+        }
+
+        // 좌표계마다 그 숫자가 어디인지 계산해 필지 주소와 함께 보여주고 고르게 함
+        async function searchCoordinates([first, second]) {
+            showSearchMessage('좌표계별 위치를 확인하는 중...');
+            await loadDxfLibs();
+            const candidates = window.dxfSite.pointCandidates(first, second);
+            if (candidates.length === 0) {
+                showSearchMessage('어느 좌표계로 계산해도 우리나라 안이 아니에요. 숫자를 다시 확인해 주세요.');
+                return;
+            }
+
+            const points = candidates.map(item => item.center.join(',')).join('|');
+            const response = await fetch(`/api/site?points=${encodeURIComponent(points)}`);
+            const addresses = response.ok ? (await response.json()).addresses : [];
+            const results = candidates
+                .map((item, index) => ({
+                    label: addresses[index] || '지적도에 없는 곳 (바다 등)',
+                    sub: `${item.name} · EPSG:${item.code}${item.swapped ? ' · 앞뒤 숫자를 바꿔 계산' : ''}`,
+                    lng: item.center[0],
+                    lat: item.center[1],
+                    found: Boolean(addresses[index])
+                }))
+                // 필지가 있는(땅 위인) 후보가 있으면 그것만 보여줌
+                .filter((result, index, list) => result.found || !list.some(other => other.found));
+
+            if (results.length === 1 && results[0].found) {
+                goToResult(results[0]);
+                return;
+            }
+            searchResults.innerHTML = '<li class="search-message">좌표계에 따라 위치가 달라져요. 맞는 곳을 골라 주세요.</li>';
+            results.forEach(result => {
+                const item = document.createElement('li');
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.innerHTML = `<b>${escapeHtml(result.label)}</b><span>${escapeHtml(result.sub)}</span>`;
+                button.addEventListener('click', () => goToResult(result));
+                item.appendChild(button);
+                searchResults.appendChild(item);
+            });
+            searchResults.hidden = false;
+        }
+
         document.getElementById('search-btn').addEventListener('click', function() {
             const keyword = addressInput.value.trim();
 
             if (keyword.length < 2) {
                 showSearchMessage('주소나 장소 이름을 2글자 이상 입력해 주세요.');
+                return;
+            }
+
+            const coordinates = parseCoordinates(keyword);
+            if (coordinates) {
+                searchCoordinates(coordinates).catch(error => {
+                    console.error('좌표 검색 오류:', error);
+                    showSearchMessage('좌표 위치를 확인하지 못했어요. 잠시 후 다시 시도해 주세요.');
+                });
                 return;
             }
 

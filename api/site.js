@@ -18,7 +18,7 @@ const {
 // 너무 넓은 부지는 외부 자료 요청이 많아져 거절 (서비스 기준)
 const MAX_SITE_AREA = 2000000; // 2㎢
 const MAX_PARCELS = 300;
-const MAX_POINTS = 12;
+const MAX_POINTS = 30; // 좌표계 13개 × 두 가지 좌표 순서
 
 function inKorea([lng, lat]) {
     return Number.isFinite(lng) && Number.isFinite(lat) && lat >= 33 && lat <= 39 && lng >= 124 && lng <= 132;
