@@ -7,7 +7,7 @@ import type { AnalysisResult, LandUseItem } from '../shared/types';
 // 이름 옆 걸친 정도: 필지는 일부만 걸쳤을 때, 사업부지 전체는 해당 필지 수
 function Relation({ item, site }: { item: LandUseItem; site: boolean }) {
     const text = site ? `${item.parcels}필지` : item.relation === 'part' ? '일부' : '';
-    return text ? <span style={{ color: '#666', fontWeight: 'normal' }}> ({text})</span> : null;
+    return text ? <span className="muted" style={{ fontWeight: 'normal' }}> ({text})</span> : null;
 }
 
 export function LandUseSection({ data, landArea }: { data: AnalysisResult; landArea: number | null }) {
@@ -62,7 +62,7 @@ export function LandUseSection({ data, landArea }: { data: AnalysisResult; landA
 
             {heritage.length > 0 && (
                 <p className="panel-sub" style={{ marginTop: 4 }}>
-                    토지이용계획에 국가유산 관련 구역({heritage.map(item => item.name).join(', ')})도 올라 있어요. 이 내용은 위 "해야 할 일"에서 안내해요.
+                    토지이용계획에 국가유산 관련 구역({heritage.map(item => item.name).join(', ')})도 올라 있어요. 이 내용은 "국가유산" 탭에서 안내해요.
                 </p>
             )}
 

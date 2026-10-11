@@ -14,6 +14,7 @@ import { SiteSetup, SiteTable, type SiteDraft } from './site/SitePanels';
 import { loadDxfSite } from './site/loadDxfSite';
 import { fetchAddresses, getJson } from './shared/api';
 import { Loading } from './shared/Loading';
+import { Sidebar, type SheetState } from './shared/Sidebar';
 import type { AnalysisResult, PointResult, SiteResponse } from './shared/types';
 
 type Panel =
@@ -33,6 +34,7 @@ function setPopupContent(marker: L.Marker, content: ReactNode) {
 export default function App() {
     const mapElement = useRef<HTMLDivElement>(null);
     const panelElement = useRef<HTMLElement>(null);
+    const sidebarElement = useRef<HTMLElement>(null); // 결과가 스크롤되는 곁 패널 (휴대폰은 아래 시트)
     const mapRef = useRef<MapController | null>(null);
 
     const [panel, setPanel] = useState<Panel | null>(null);
@@ -42,6 +44,7 @@ export default function App() {
     const [departments, setDepartments] = useState<DepartmentData | null>(null);
     const [siteResponse, setSiteResponse] = useState<SiteResponse | null>(null);
     const [scrollTarget, setScrollTarget] = useState<{ id: string } | null>(null);
+    const [sheet, setSheet] = useState<SheetState>('peek');
 
     const sharedInputs = useRef<SharedLink | null>(null); // 공유 링크로 열었을 때 처음 한 번 채울 입력값
     const siteDraft = useRef<SiteDraft | null>(null);
@@ -49,11 +52,17 @@ export default function App() {
 
     const scrollTo = (id: string) => setScrollTarget({ id });
 
+    // 결과 패널(또는 그 안의 한 부분)을 보여줌. 휴대폰에서 시트가 접혀 있으면 반쯤 펼침
     useEffect(() => {
         if (!scrollTarget) return;
+        setSheet(current => current === 'peek' ? 'half' : current);
         const element = document.getElementById(scrollTarget.id);
         if (element instanceof HTMLDetailsElement) element.open = true;
-        (element || panelElement.current)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (scrollTarget.id === 'result-panel' || !element) {
+            sidebarElement.current?.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     }, [scrollTarget]);
 
     // options.elevation: 도면에서 읽은 표고. 공유 링크로 열었으면 링크의 입력값을 채움
@@ -70,6 +79,7 @@ export default function App() {
         });
         panelId.current += 1;
         setPanel({ kind: 'guidance', id: panelId.current, data, options, location, diagnosedAt: new Date() });
+        sidebarElement.current?.scrollTo({ top: 0 }); // 새 결과는 맨 위부터
     }
 
     // 한 지점의 필지를 진단 (지도 클릭, 주소 검색, 공유 링크에서 사용)
@@ -79,7 +89,7 @@ export default function App() {
         const marker = controller.placeMarker(latlng);
         marker.bindPopup('필지와 국가유산 데이터 확인 중...', { maxWidth: 320 }).openPopup();
         setShareLocation(latlng);
-        setPanel({ kind: 'message', title: '진단 결과 · 해야 할 일', text: '필지와 국가유산 데이터를 확인하는 중이에요...', loadingSince: Date.now() });
+        setPanel({ kind: 'message', title: '진단 결과', text: '필지와 국가유산 데이터를 확인하는 중이에요...', loadingSince: Date.now() });
 
         const query = `lat=${latlng.lat}&lng=${latlng.lng}`;
         try {
@@ -102,7 +112,7 @@ export default function App() {
             console.error('진단 오류:', error);
             if (!controller.isActiveMarker(marker)) return;
             marker.setPopupContent('국가유산 데이터를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
-            setPanel({ kind: 'message', title: '진단 결과 · 해야 할 일', text: '국가유산 데이터를 확인하지 못했어요. 잠시 후 같은 곳을 다시 눌러 주세요.' });
+            setPanel({ kind: 'message', title: '진단 결과', text: '국가유산 데이터를 확인하지 못했어요. 잠시 후 같은 곳을 다시 눌러 주세요.' });
         }
     }
 
@@ -359,14 +369,34 @@ export default function App() {
     }
 
     return (
-        <>
-            <div id="map" ref={mapElement} />
-            <SearchBox onGo={result => diagnoseAt({ lat: result.lat, lng: result.lng })} onDxfFile={handleDxfFile} />
-            {/* 진단 결과 패널: 필지를 누르면 해야 할 일과 비용 안내 표시 */}
-            <section id="result-panel" ref={panelElement} hidden={!panel}>{panelContent}</section>
-            <p id="data-source">
-                출처: 국가유산청 국가유산 공간정보서비스(문화유적분포지도, 국가유산조사구역), 국토교통부 브이월드(국가유산 지정/보호구역, 지적도, 토지이용계획), OpenStreetMap
-            </p>
-        </>
+        <div className="app">
+            <div className="map-area">
+                <div id="map" ref={mapElement} />
+                <SearchBox onGo={result => diagnoseAt({ lat: result.lat, lng: result.lng })} onDxfFile={handleDxfFile} />
+            </div>
+            <Sidebar sheet={sheet} onSheetChange={setSheet} scrollRef={sidebarElement}>
+                {/* 진단 결과 패널: 아무것도 고르지 않았으면 사용 안내 */}
+                <section id="result-panel" ref={panelElement}>{panelContent || <Intro />}</section>
+                <p id="data-source">
+                    출처: 국가유산청 국가유산 공간정보서비스(문화유적분포지도, 국가유산조사구역), 국토교통부 브이월드(국가유산 지정/보호구역, 지적도, 토지이용계획), OpenStreetMap
+                </p>
+            </Sidebar>
+        </div>
+    );
+}
+
+// 처음 열었을 때 결과 자리에 보여주는 사용 안내
+function Intro() {
+    return (
+        <div className="intro">
+            <h3>땅파기전</h3>
+            <p className="intro-lead">공사 전에 땅속 문화유산과 토지 규제를 미리 확인해요.</p>
+            <ol className="intro-steps">
+                <li><b>지도에서 땅을 누르거나</b> 검색창에 주소·지번을 넣으세요.</li>
+                <li>그 필지의 <b>국가유산 위험도</b>, 해야 할 일, 비용, <b>다른 토지 규제</b>를 보여줘요.</li>
+                <li>사업부지가 여러 필지면 <b>도면(DXF)</b>을 올려 한 번에 진단할 수 있어요.</li>
+            </ol>
+            <p className="disclaimer">공공데이터와 법령을 바탕으로 한 참고자료이며 법적 판단을 대신하지 않아요.</p>
+        </div>
     );
 }

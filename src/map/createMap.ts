@@ -1,4 +1,4 @@
-// Leaflet 지도: 배경지도, 지적도·국가유산 레이어, 범례, 확대 안내, 내 위치 버튼
+// Leaflet 지도: 배경지도, 지적도·국가유산 레이어, 레이어·범례 메뉴, 확대 안내, 내 위치 버튼
 // 지도는 Leaflet이 직접 그리고, React 쪽에서는 이 파일이 돌려주는 함수로만 다룸
 import L from 'leaflet';
 import type { Feature, FeatureCollection, Geometry } from 'geojson';
@@ -56,7 +56,9 @@ export interface MapController {
 
 export function createMap(element: HTMLElement, onClick: (latlng: L.LatLng) => void): MapController {
     // 지도 초기화 (서울 시청, 줌 레벨 13)
-    const map = L.map(element).setView([37.5665, 126.9780], 13);
+    // 확대·축소 버튼은 왼쪽 위 검색창과 겹치지 않게 오른쪽 아래로
+    const map = L.map(element, { zoomControl: false }).setView([37.5665, 126.9780], 13);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     // 오픈스트리트맵(무료 배경 지도)
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -154,44 +156,85 @@ export function createMap(element: HTMLElement, onClick: (latlng: L.LatLng) => v
         load(); // 꺼진 레이어는 load 안에서 건너뜀
     });
 
-    L.control.layers(undefined, {
-        '지적도 표시': cadastralLayer,
-        '국가유산 구역 표시': heritageLayer,
-        '문화유적 분포 범위 표시': sitesLayer,
-        '현상변경 허용기준 구역 표시': allowanceLayer,
-        '세계유산 구역·완충구역 표시': worldLayer
-    }).addTo(map);
+    // 레이어·범례 메뉴: 레이어마다 켜고 끄는 칸과 지도 색 설명을 한곳에 (VWorld 색은 GetLegendGraphic 기준)
+    const swatch = (style: string) => `<span class="swatch" style="${style}"></span>`;
+    const LAYER_ITEMS: { layer: L.Layer; label: string; legend: string[] }[] = [
+        {
+            layer: heritageLayer,
+            label: '국가유산 구역',
+            legend: [
+                `${swatch('background: #ffff4d; border: 1px solid #c9c900;')}국가·시도 지정유산 구역`,
+                `${swatch('background: repeating-linear-gradient(135deg, #4bb3e8 0 2px, #fff 2px 4px);')}보호구역`,
+                `${swatch('border: 2px solid #4caf50;')}역사문화환경 보존지역`
+            ]
+        },
+        {
+            layer: sitesLayer,
+            label: '문화유적 분포 범위',
+            legend: [`${swatch('background: rgba(157, 78, 221, 0.25); border: 1.5px solid #7b2cbf;')}땅속 유적이 있을 수 있는 범위`]
+        },
+        {
+            layer: allowanceLayer,
+            label: '현상변경 허용기준 구역',
+            legend: [`${swatch('background: linear-gradient(90deg, #d62828, #f77f00, #fcbf49, #90be6d, #43aa8b);')}빨강 1구역(엄격) → 초록 바깥 구역`]
+        },
+        {
+            layer: worldLayer,
+            label: '세계유산 구역',
+            legend: [
+                `${swatch('background: rgba(42, 209, 201, 0.3); border: 1.5px solid #008f87;')}세계유산 구역`,
+                `${swatch('border: 1.5px dashed #ff7078;')}완충구역`
+            ]
+        },
+        { layer: cadastralLayer, label: '지적도', legend: [`${swatch('border: 1.5px solid #e8a33d;')}필지 경계`] }
+    ];
 
-    // 범례: 지도 색깔이 무엇을 뜻하는지 표시 (VWorld 색은 GetLegendGraphic 기준)
-    const legend = new L.Control({ position: 'bottomleft' });
-    legend.onAdd = () => {
-        const div = L.DomUtil.create('div', 'map-legend');
+    const layerMenu = new L.Control({ position: 'topright' });
+    layerMenu.onAdd = () => {
+        const div = L.DomUtil.create('div', 'layer-menu');
         div.innerHTML = `
-            <button type="button" class="legend-title" aria-expanded="true">범례 <span class="legend-arrow">▾</span></button>
-            <div class="legend-items">
-                <div><span class="swatch" style="background: #ffff4d; border: 1px solid #c9c900;"></span>국가·시도 지정유산 구역</div>
-                <div><span class="swatch" style="background: repeating-linear-gradient(135deg, #4bb3e8 0 2px, #fff 2px 4px);"></span>보호구역</div>
-                <div><span class="swatch" style="border: 2px solid #4caf50;"></span>역사문화환경 보존지역</div>
-                <div><span class="swatch" style="background: rgba(157, 78, 221, 0.25); border: 1.5px solid #7b2cbf;"></span>문화유적 분포 범위</div>
-                <div><span class="swatch" style="border: 1.5px dashed #d62828;"></span>현상변경 허용기준 구역 (켰을 때, 빨강 1구역 → 초록 바깥 구역)</div>
-                <div><span class="swatch" style="background: rgba(42, 209, 201, 0.3); border: 1.5px solid #008f87;"></span>세계유산 구역 (켰을 때)</div>
-                <div><span class="swatch" style="border: 1.5px dashed #ff7078;"></span>세계유산 완충구역 (켰을 때)</div>
-                <div><span class="swatch" style="border: 1.5px solid #e8a33d;"></span>지적도(필지 경계)</div>
+            <button type="button" class="layer-menu-toggle" aria-expanded="true">
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 3 2 8l10 5 10-5-10-5Zm-10 9 10 5 10-5M2 16l10 5 10-5"/></svg>
+                레이어
+            </button>
+            <div class="layer-menu-items">
+                ${LAYER_ITEMS.map((item, index) => `
+                    <label class="layer-item">
+                        <input type="checkbox" data-index="${index}" ${map.hasLayer(item.layer) ? 'checked' : ''}>
+                        <span class="layer-name">${item.label}</span>
+                    </label>
+                    <div class="layer-legend">${item.legend.map(line => `<div>${line}</div>`).join('')}</div>
+                `).join('')}
             </div>
         `;
 
-        // 제목을 누르면 접고 펼침. 휴대폰처럼 좁은 화면에서는 접힌 채로 시작
-        const toggle = div.querySelector('.legend-title') as HTMLButtonElement;
+        // 켜고 끄면 도형 불러오기·확대 안내가 따라가도록 overlayadd/overlayremove를 알림
+        div.querySelectorAll<HTMLInputElement>('input[type=checkbox]').forEach(input => {
+            input.addEventListener('change', () => {
+                const { layer } = LAYER_ITEMS[Number(input.dataset.index)];
+                if (input.checked) {
+                    map.addLayer(layer);
+                    map.fire('overlayadd', { layer });
+                } else {
+                    map.removeLayer(layer);
+                    map.fire('overlayremove', { layer });
+                }
+            });
+        });
+
+        // 버튼을 누르면 접고 펼침. 휴대폰처럼 좁은 화면에서는 접힌 채로 시작
+        const toggle = div.querySelector('.layer-menu-toggle') as HTMLButtonElement;
         const setOpen = (open: boolean) => {
             div.classList.toggle('is-collapsed', !open);
             toggle.setAttribute('aria-expanded', String(open));
         };
-        setOpen(!window.matchMedia('(max-width: 600px)').matches);
+        setOpen(!window.matchMedia('(max-width: 768px)').matches);
         L.DomEvent.disableClickPropagation(div);
+        L.DomEvent.disableScrollPropagation(div);
         L.DomEvent.on(toggle, 'click', () => setOpen(div.classList.contains('is-collapsed')));
         return div;
     };
-    legend.addTo(map);
+    layerMenu.addTo(map);
 
     // 켜져 있는 레이어가 현재 줌에서 안 보이면 안내 문구 표시
     const zoomHint = new L.Control({ position: 'bottomleft' });

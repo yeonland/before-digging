@@ -1,7 +1,7 @@
-// 결과 패널 아래쪽: 해야 할 일, 다른 토지 규제, 굴착 깊이, 비용, 주변 유적·조사 이력, 문의처, 알아두세요
+// 결과 패널의 탭 내용: 국가유산(해야 할 일·굴착 깊이·비용·알아두세요), 주변 자료(유적·조사 이력), 문의처
+// (다른 토지 규제 탭은 LandUseSection.tsx)
 import type { Guidance } from './guidance.js';
 import { findDepartment, officeName, type DepartmentData } from './departments';
-import { LandUseSection } from './LandUseSection';
 import { addressDistrict, addressDong, reportSearchWord, REPORT_SEARCH_URL, STATUS_SEARCH_URL } from './links';
 import type { Agency, AnalysisResult, Elevation, Survey } from '../shared/types';
 
@@ -89,7 +89,7 @@ function BoreholeNote({ data, ground, onUse }: { data: AnalysisResult; ground: n
             <ul className="step-items">
                 {info.items.map((item, index) => (
                     <li key={index}>
-                        {item.distance === 0 ? <b>경계 안</b> : `약 ${item.distance}m`} · 지반 고도 {item.elevation}m <span style={{ color: '#666' }}>(시추 깊이 {item.depth}m)</span>
+                        {item.distance === 0 ? <b>경계 안</b> : `약 ${item.distance}m`} · 지반 고도 {item.elevation}m <span className="muted">(시추 깊이 {item.depth}m)</span>
                     </li>
                 ))}
             </ul>
@@ -127,7 +127,7 @@ function SurveyItem({ survey }: { survey: Survey }) {
 }
 
 // 관할 시·군·구 문화유산 담당 부서 (부서 이름은 행정표준코드, 전화번호는 자료에 없어 검색·110 안내)
-function ContactSection({ address, departments }: { address?: string; departments: DepartmentData | null }) {
+export function ContactSection({ address, departments }: { address?: string; departments: DepartmentData | null }) {
     const district = addressDistrict(address);
     if (!district) return null;
 
@@ -140,7 +140,7 @@ function ContactSection({ address, departments }: { address?: string; department
         return (
             <span key={index}>
                 {index > 0 && ', '}
-                {office} <b>{name}</b>{parts.length > 0 && <> <span style={{ color: '#666' }}>({parts.join(' ')})</span></>}
+                {office} <b>{name}</b>{parts.length > 0 && <> <span className="muted">({parts.join(' ')})</span></>}
             </span>
         );
     };
@@ -180,21 +180,17 @@ function ContactSection({ address, departments }: { address?: string; department
     );
 }
 
-export function ResultSections({ data, guidance, landArea, ground, depth, elevation, departments, onUseBorehole }: {
+// 국가유산 탭: 해야 할 일, 굴착 깊이, 비용, 알아두세요
+export function HeritageSections({ data, guidance, ground, depth, elevation, onUseBorehole }: {
     data: AnalysisResult;
     guidance: Guidance;
-    landArea: number | null;
     ground: number | null;
     depth: number | null;
     elevation: Elevation | null;
-    departments: DepartmentData | null;
     onUseBorehole: (value: number) => void;
 }) {
-    const { nearbySites, surveys } = data;
-    const dong = addressDong(data.parcel && data.parcel.address);
-
     return (
-        <div>
+        <>
             <h4>해야 할 일</h4>
             {guidance.steps.map((step, index) => (
                 <div key={index} className={`step ${step.level}`}>
@@ -210,8 +206,6 @@ export function ResultSections({ data, guidance, landArea, ground, depth, elevat
                     <LawDetails law={step.law} />
                 </div>
             ))}
-
-            <LandUseSection data={data} landArea={landArea} />
 
             <ExcavationSection ground={ground} depth={depth} elevation={elevation} data={data} onUseBorehole={onUseBorehole} />
 
@@ -229,6 +223,21 @@ export function ResultSections({ data, guidance, landArea, ground, depth, elevat
                 </>
             )}
 
+            <h4>알아두세요</h4>
+            <ul className="notes">
+                {guidance.notes.map((note, index) => <li key={index}>{note.text} <LawDetails law={note.law} /></li>)}
+            </ul>
+        </>
+    );
+}
+
+// 주변 자료 탭: 500m 안 문화유적, 조사 이력
+export function NearbySections({ data }: { data: AnalysisResult }) {
+    const { nearbySites, surveys } = data;
+    const dong = addressDong(data.parcel && data.parcel.address);
+
+    return (
+        <>
             {nearbySites && (
                 <>
                     <h4>주변 문화유적 (500m 이내)</h4>
@@ -238,7 +247,7 @@ export function ResultSections({ data, guidance, landArea, ground, depth, elevat
                                 {nearbySites.map((site, index) => (
                                     <li key={index}>
                                         {site.name} · 약 {site.distance}m
-                                        {site.mapNo && <> <span style={{ color: '#666', fontSize: 12 }}>(분포지도 {site.mapNo})</span></>}
+                                        {site.mapNo && <> <span className="muted small">(분포지도 {site.mapNo})</span></>}
                                     </li>
                                 ))}
                             </ul>
@@ -257,21 +266,12 @@ export function ResultSections({ data, guidance, landArea, ground, depth, elevat
                     {dong && (
                         <p className="panel-sub" style={{ marginTop: 4 }}>
                             <a {...externalLink} href={`${STATUS_SEARCH_URL}${encodeURIComponent(dong)}`}>{dong} 발굴조사 허가 현황 보기 ↗</a>{' '}
-                            <span style={{ color: '#666', fontSize: 12 }}>(국가유산청, 최근 신청된 조사까지)</span>
+                            <span className="muted small">(국가유산청, 최근 신청된 조사까지)</span>
                         </p>
                     )}
                     <p className="disclaimer" style={{ marginTop: 4 }}>국가유산청 국가유산조사구역 자료예요. 가까운 순으로 최대 10건을 보여주고, 조사 종류와 연도는 보고서 이름에서 읽어낸 거라 실제와 다를 수 있어요. "보고서 찾기"는 국가유산청 발굴조사 보고서 목록을 조사 위치로 검색해요. 2017년쯤부터 제출된 발굴·시굴조사 보고서만 있고 지표조사 보고서는 없어서, 예전 조사는 안 나올 수 있어요. 조사기관 연락처는 한국문화유산협회 회원기관 목록에 있는 기관만 보여줘요. 보고서를 보거나 조사 내용을 물어볼 때 연락해 보세요.</p>
                 </>
             )}
-
-            <ContactSection address={data.parcel && data.parcel.address} departments={departments} />
-
-            <h4>알아두세요</h4>
-            <ul className="notes">
-                {guidance.notes.map((note, index) => <li key={index}>{note.text} <LawDetails law={note.law} /></li>)}
-            </ul>
-            {guidance.incomplete && <p className="disclaimer">※ 일부 데이터를 불러오지 못해 안내가 불완전할 수 있어요.</p>}
-            <p className="disclaimer">이 안내는 공공데이터와 법령을 바탕으로 한 <b>참고용 정보</b>이며 법적 판단을 대신하지 않아요. 정확한 내용은 관할 시·군·구 문화유산 담당 부서나 국가유산청에 문의하세요.</p>
-        </div>
+        </>
     );
 }
