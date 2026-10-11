@@ -1,7 +1,8 @@
-// 지도 핀 팝업: 필지 진단 요약, 지적도에 없는 곳의 지점 진단
+// 지도 핀 팝업: 필지 진단 요약(PC), 짧은 요약 + 바로가기(휴대폰), 지적도에 없는 곳의 지점 진단
 import { buildRisk } from '../result/guidance.js';
 import { buildLandGuidance } from '../result/land-rules';
-import { formatArea, overlapItems } from '../shared/format';
+import type { TabId } from '../result/ResultPanel';
+import { formatArea, overlapItems, shortAddress } from '../shared/format';
 import { OverlapLabel } from '../shared/OverlapLabel';
 import type { AnalysisResult, PointResult } from '../shared/types';
 
@@ -91,6 +92,56 @@ export function ParcelPopup({ data, onShowPanel, onShowOverlaps }: {
             )}
             {failed && <FailNote />}
             <button type="button" className="go-panel" onClick={onShowPanel}>결과 자세히 보기 ▼</button>
+        </div>
+    );
+}
+
+// 휴대폰용 짧은 팝업: 주소·위험도·한 줄 요약과, 누르면 아래 결과 창의 그 부분으로 가는 버튼
+// (자세한 내용은 결과 창에 있어서, 팝업이 화면을 덮지 않게 줄임)
+export function CompactParcelPopup({ data, onJump }: {
+    data: AnalysisResult;
+    onJump: (target: TabId | 'overlap') => void;
+}) {
+    const items = overlapItems(data);
+    const realItems = items.filter(item => !item.edgeOnly);
+    const failed = data.zones === null || data.sites === null;
+    const risk = buildRisk(data);
+    const landRules = data.landUse
+        ? buildLandGuidance(data.landUse, data.parcel.jibun).rules.filter(rule => rule.level !== 'info')
+        : [];
+    const strictLand = landRules.some(rule => rule.level === 'required');
+
+    let summary;
+    if (realItems.length > 0 && realItems.every(item => item.natural)) {
+        summary = `자연유산 구역에 ${data.overlap.ratio}% 걸쳐요 (땅속 유물 절차와 별개)`;
+    } else if (realItems.length > 0) {
+        summary = `필지의 ${data.overlap.ratio}%가 국가유산 영역에 걸쳐요`;
+    } else if (items.length > 0) {
+        summary = '국가유산 영역이 경계에만 살짝 걸쳐요';
+    } else if (failed) {
+        summary = '일부 자료를 불러오지 못했어요';
+    } else {
+        summary = '국가유산 영역에 걸치지 않아요';
+    }
+
+    return (
+        <div className="compact-popup">
+            <div className="compact-head">
+                <b>{shortAddress(data.parcel.address)}</b>
+                <span className={`risk-badge ${risk.level}`}>{risk.icon} {risk.label}</span>
+            </div>
+            <div className="compact-summary">{summary}</div>
+            <div className="compact-links">
+                {items.length > 0 && (
+                    <button type="button" onClick={() => onJump('overlap')}>국가유산 영역 {items.length}건 ›</button>
+                )}
+                {landRules.length > 0 && (
+                    <button type="button" className={strictLand ? 'strict' : ''} onClick={() => onJump('land')}>
+                        토지 규제 {landRules.length}건 ›
+                    </button>
+                )}
+                <button type="button" className="primary" onClick={() => onJump('heritage')}>해야 할 일 ›</button>
+            </div>
         </div>
     );
 }

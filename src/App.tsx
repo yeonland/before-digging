@@ -4,9 +4,9 @@ import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import type L from 'leaflet';
 import { createMap, type MapController } from './map/createMap';
-import { ParcelPopup, PointPopup } from './map/Popups';
+import { CompactParcelPopup, ParcelPopup, PointPopup } from './map/Popups';
 import { SearchBox } from './search/SearchBox';
-import { ResultPanel, type ResultOptions } from './result/ResultPanel';
+import { ResultPanel, type ResultOptions, type TabId } from './result/ResultPanel';
 import { buildRisk } from './result/guidance.js';
 import { loadDepartments, type DepartmentData } from './result/departments';
 import { buildShareUrl, readSharedLink, type LatLng, type PanelInputs, type SharedLink } from './result/share';
@@ -46,6 +46,7 @@ export default function App() {
     const [siteResponse, setSiteResponse] = useState<SiteResponse | null>(null);
     const [scrollTarget, setScrollTarget] = useState<{ id: string } | null>(null);
     const [sheet, setSheet] = useState<SheetState>('peek');
+    const [tabRequest, setTabRequest] = useState<{ tab: TabId } | null>(null);
     const [showHelp, setShowHelp] = useState(false); // 사용설명서를 결과 자리에 띄움 (닫으면 원래 내용)
 
     const sharedInputs = useRef<SharedLink | null>(null); // 공유 링크로 열었을 때 처음 한 번 채울 입력값
@@ -68,17 +69,22 @@ export default function App() {
         setSheet(current => current === 'peek' ? 'half' : current);
         const element = document.getElementById(scrollTarget.id);
         if (element instanceof HTMLDetailsElement) element.open = true;
-        if (scrollTarget.id === 'result-panel' || !element) {
-            sidebarElement.current?.scrollTo({ top: 0, behavior: 'smooth' });
-        } else {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        // 휴대폰은 시트가 펼쳐지는 중(0.25초)에 스크롤하면 덜 올라가서, 다 펼쳐진 뒤에 이동
+        const timer = setTimeout(() => {
+            if (scrollTarget.id === 'result-panel' || !element) {
+                sidebarElement.current?.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, isPhone() ? 300 : 0);
+        return () => clearTimeout(timer);
     }, [scrollTarget]);
 
     // options.elevation: 도면에서 읽은 표고. 공유 링크로 열었으면 링크의 입력값을 채움
     function showResultPanel(data: AnalysisResult, options: ResultOptions, location: LatLng | null) {
         const shared = sharedInputs.current;
         sharedInputs.current = null;
+        setTabRequest(null); // 지난 결과에서 요청한 탭이 새 결과에 열리지 않게
         const text = (value: number | null | undefined, fallback: string) => value !== null && value !== undefined ? String(value) : fallback;
         setInputs({
             work: shared ? shared.work : '',
@@ -110,9 +116,18 @@ export default function App() {
             if (data.parcel) {
                 const result = data as AnalysisResult;
                 controller.highlightParcel(result.parcel.geometry);
-                setPopupContent(marker, (
-                    <ParcelPopup data={result} onShowPanel={() => scrollTo('result-panel')} onShowOverlaps={() => scrollTo('overlap-list')} />
-                ));
+                // 휴대폰은 결과 창과 내용이 겹쳐서 짧은 팝업 + 그 부분으로 가는 버튼만
+                setPopupContent(marker, isPhone()
+                    ? <CompactParcelPopup data={result} onJump={target => {
+                        if (target === 'overlap') {
+                            scrollTo('overlap-list');
+                        } else {
+                            setTabRequest({ tab: target });
+                            setSheet(current => current === 'peek' ? 'half' : current);
+                        }
+                    }} />
+                    : <ParcelPopup data={result} onShowPanel={() => scrollTo('result-panel')} onShowOverlaps={() => scrollTo('overlap-list')} />
+                );
                 showResultPanel(result, {}, latlng);
                 return;
             }
@@ -364,6 +379,7 @@ export default function App() {
                 </div>
                 <ResultPanel
                     key={guidance.id}
+                    tabRequest={tabRequest}
                     data={guidance.data}
                     options={guidance.options}
                     inputs={inputs}
@@ -396,6 +412,11 @@ export default function App() {
             </Sidebar>
         </div>
     );
+}
+
+// 휴대폰 배치(하단 시트)인지. CSS의 768px 기준과 같음
+function isPhone() {
+    return window.matchMedia('(max-width: 768px)').matches;
 }
 
 // 처음 열었을 때 결과 자리에 보여주는 사용 안내

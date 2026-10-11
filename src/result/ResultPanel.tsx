@@ -1,6 +1,6 @@
 // 진단 결과 패널: 맨 위 요약(위험도·할 일 개수·걸친 영역·공사 정보 입력칸), 아래는 탭
 // 탭: 국가유산(해야 할 일·굴착·비용) / 토지 규제 / 주변 자료 / 문의 (규칙은 guidance.js, land-rules.ts)
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { buildGuidance, buildRisk, type Guidance, type Risk } from './guidance.js';
 import { buildLandGuidance } from './land-rules';
 import { LandUseSection } from './LandUseSection';
@@ -20,7 +20,7 @@ export interface ResultOptions {
     siteTable?: boolean; // 위험도 아래에 도면 사업부지 필지별 표
 }
 
-type TabId = 'heritage' | 'land' | 'nearby' | 'contact';
+export type TabId = 'heritage' | 'land' | 'nearby' | 'contact';
 
 const TABS: { id: TabId; label: string }[] = [
     { id: 'heritage', label: '국가유산' },
@@ -119,7 +119,7 @@ function OverlapList({ data, areaName }: { data: AnalysisResult; areaName: strin
     );
 }
 
-export function ResultPanel({ data, options, inputs, onInputsChange, shareUrl, departments, siteTable, onBack }: {
+export function ResultPanel({ data, options, inputs, onInputsChange, shareUrl, departments, siteTable, onBack, tabRequest }: {
     data: AnalysisResult;
     options: ResultOptions;
     inputs: PanelInputs;
@@ -128,6 +128,7 @@ export function ResultPanel({ data, options, inputs, onInputsChange, shareUrl, d
     departments: DepartmentData | null;
     siteTable?: ReactNode;
     onBack: () => void;
+    tabRequest?: { tab: TabId } | null; // 바깥(휴대폰 팝업 버튼)에서 이 탭을 열어 달라는 요청
 }) {
     const [tab, setTab] = useState<TabId>('heritage');
     const [shareStatus, setShareStatus] = useState('');
@@ -150,6 +151,14 @@ export function ResultPanel({ data, options, inputs, onInputsChange, shareUrl, d
         setTab(id);
         document.getElementById('result-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+
+    // 휴대폰 시트가 펼쳐지는 중(0.25초)에 스크롤하면 덜 올라가서, 다 펼쳐진 뒤에 탭 머리로 이동
+    useEffect(() => {
+        if (!tabRequest) return;
+        setTab(tabRequest.tab);
+        const timer = setTimeout(() => openTab(tabRequest.tab), 300);
+        return () => clearTimeout(timer);
+    }, [tabRequest]);
 
     async function copyShareLink() {
         if (!shareUrl) return;

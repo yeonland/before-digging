@@ -405,6 +405,63 @@ a {
     border-radius: var(--radius);
 }
 
+/* 휴대폰 짧은 팝업 */
+.compact-popup {
+    min-width: 220px;
+    font-size: 13px;
+}
+.compact-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 26px; /* 닫기 버튼 자리 */
+    font-size: 14px;
+}
+.compact-head .risk-badge {
+    font-size: 12px;
+}
+.compact-summary {
+    margin-top: 4px;
+    color: var(--muted);
+}
+.compact-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+.compact-links button {
+    min-height: 34px;
+    padding: 4px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    font-size: 13px;
+    cursor: pointer;
+}
+.compact-links button.strict {
+    border-color: #f3b4bb;
+    color: var(--high);
+}
+.compact-links button.primary {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: white;
+    font-weight: 600;
+}
+@media (max-width: 768px) {
+    .leaflet-popup-content {
+        margin: 12px 14px;
+    }
+    /* 손가락으로 누르기 쉽게 닫기 버튼을 키움 */
+    .leaflet-container a.leaflet-popup-close-button {
+        width: 36px;
+        height: 36px;
+        font-size: 24px;
+        line-height: 34px;
+    }
+}
+
 /* 팝업·패널의 작은 버튼 */
 .go-panel {
     margin-top: 8px;
@@ -756,6 +813,13 @@ a {
     scroll-margin-top: 0;
 }
 @media (max-width: 768px) {
+    /* 바로가기로 이동할 때 시트 손잡이에 가리지 않게 */
+    #result-tabs {
+        scroll-margin-top: 22px;
+    }
+    #overlap-list {
+        scroll-margin-top: 44px;
+    }
     .tabs {
         top: 22px; /* 시트 손잡이 아래 */
         margin: 18px -16px 0;
