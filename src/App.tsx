@@ -365,7 +365,7 @@ export default function App() {
             {/* 진단 결과 패널: 필지를 누르면 해야 할 일과 비용 안내 표시 */}
             <section id="result-panel" ref={panelElement} hidden={!panel}>{panelContent}</section>
             <p id="data-source">
-                출처: 국가유산청 국가유산 공간정보서비스(문화유적분포지도, 국가유산조사구역), 국토교통부 브이월드(국가유산 지정/보호구역, 지적도), OpenStreetMap
+                출처: 국가유산청 국가유산 공간정보서비스(문화유적분포지도, 국가유산조사구역), 국토교통부 브이월드(국가유산 지정/보호구역, 지적도, 토지이용계획), OpenStreetMap
             </p>
         </>
     );

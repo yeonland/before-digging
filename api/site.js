@@ -14,6 +14,7 @@ const {
     getOverlap,
     roundArea
 } = require('./_lib/analyze');
+const { fetchLandUses, mergeLandUses } = require('./_lib/land-use');
 const { allowMethods, vworldAuth, inKorea } = require('./_lib/http');
 
 // 너무 넓은 부지는 외부 자료 요청이 많아져 거절 (서비스 기준)
@@ -121,11 +122,14 @@ module.exports = async function handler(req, res) {
         Math.max(bbox[2], ...parcelBoxes.map((box) => box[2])),
         Math.max(bbox[3], ...parcelBoxes.map((box) => box[3]))
     ];
+    // 토지 규제(토지이용계획)는 필지마다 따로 조회해야 해서 국가유산 진단과 함께 돌림
+    const landUsePromise = fetchLandUses(inSite.map((item) => item.parcel.properties.pnu), apiKey, registeredDomain);
     const data = clipAreaData(await fetchAreaData(dataBbox, apiKey, registeredDomain, { wide: true }), dataBbox);
 
     const siteResult = await analyze(siteFeature, data);
+    const landUses = await landUsePromise;
     const parcelResults = [];
-    for (const item of inSite) {
+    for (const [index, item] of inSite.entries()) {
         const result = await analyze(item.parcelFeature, data);
         parcelResults.push({
             parcel: {
@@ -136,7 +140,8 @@ module.exports = async function handler(req, res) {
                 inSiteArea: roundArea(item.inSiteArea),
                 geometry: item.parcelFeature.geometry
             },
-            ...result
+            ...result,
+            landUse: landUses[index]
         });
     }
 
@@ -147,7 +152,7 @@ module.exports = async function handler(req, res) {
             parcelsTruncated: Boolean(parcels.truncated),
             geometry
         },
-        result: siteResult,
+        result: { ...siteResult, landUse: mergeLandUses(landUses) },
         parcels: parcelResults
     });
 };

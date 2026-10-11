@@ -145,6 +145,7 @@ export function ResultPanel({ data, options, inputs, onInputsChange, shareUrl, d
             <ResultSections
                 data={data}
                 guidance={guidance}
+                landArea={readNumber(inputs.landArea)}
                 ground={readElevation(inputs.ground)}
                 depth={readNumber(inputs.depth)}
                 elevation={options.elevation || null}

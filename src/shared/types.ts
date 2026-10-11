@@ -1,4 +1,4 @@
-// /api 응답 모양 (api/_lib/analyze.js, api/parcel.js, api/site.js, api/heritage.js, api/search.js)
+// /api 응답 모양 (api/_lib/analyze.js, api/_lib/land-use.js, api/parcel.js, api/site.js, api/heritage.js, api/search.js)
 import type { Geometry } from 'geojson';
 import type { Risk } from '../result/guidance.js';
 
@@ -72,6 +72,15 @@ export interface Boreholes {
     items: { distance: number; elevation: number; depth: number }[];
 }
 
+// 토지이용계획 한 줄 (api/_lib/land-use.js). relation: in 포함, part 일부 걸침
+// parcels: 도면 사업부지 전체일 때 해당 필지 수
+export interface LandUseItem {
+    name: string;
+    code: string;
+    relation: 'in' | 'part';
+    parcels?: number;
+}
+
 export interface Parcel {
     pnu?: string;
     address: string;
@@ -93,6 +102,7 @@ export interface AnalysisResult {
     allowance?: Allowance[] | null;
     worldHeritage?: WorldHeritage | null;
     boreholes?: Boreholes | null;
+    landUse?: LandUseItem[] | null;
     overlap: { area: number; ratio: number; siteArea: number; siteRatio: number };
 }
 

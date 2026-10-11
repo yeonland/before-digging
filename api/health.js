@@ -11,12 +11,14 @@ const {
     fetchAllowanceCriteria,
     fetchWorldHeritage
 } = require('./_lib/heritage-gis');
+const { fetchLandUse } = require('./_lib/land-use');
 const { allowMethods, vworldAuth } = require('./_lib/http');
 
 const TIMEOUT_MS = 20000;
 
 // 점검 위치: 자료가 확실히 있는 곳
 const GYEONGBOKGUNG = { lat: 37.5786, lng: 126.977 }; // 경복궁 근정전 (국가유산 구역, 필지)
+const GYEONGBOKGUNG_PNU = '1111011900100010001'; // 경복궁 필지 (종로구 세종로 1-1, 토지이용계획)
 const JONGMYO = { lat: 37.5746, lng: 126.994 }; // 종묘 (세계유산)
 const GYEONGJU_BBOX = [129.222, 35.83, 129.227, 35.835]; // 경주 월성 주변 (유적·조사 이력·허용기준)
 
@@ -130,6 +132,11 @@ module.exports = async function handler(req, res) {
             id: 'vworld-zones',
             name: 'VWorld 국가유산 지정/보호구역',
             run: async () => expectSome(await fetchVworldFeatures('LT_C_UO301', point(GYEONGBOKGUNG), apiKey, domain), '국가유산 구역')
+        },
+        {
+            id: 'vworld-land-use',
+            name: 'VWorld 토지이용계획 (다른 토지 규제)',
+            run: async () => expectSome(await fetchLandUse(GYEONGBOKGUNG_PNU, apiKey, domain), '용도지역·지구')
         },
         { id: 'vworld-wms', name: 'VWorld 지적도 이미지', run: () => checkWms(apiKey, domain) },
         { id: 'vworld-search', name: 'VWorld 주소 검색', run: () => checkSearch(apiKey, domain) },

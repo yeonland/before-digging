@@ -1,5 +1,6 @@
 // 지도 핀 팝업: 필지 진단 요약, 지적도에 없는 곳의 지점 진단
 import { buildRisk } from '../result/guidance.js';
+import { buildLandGuidance } from '../result/land-rules';
 import { formatArea, overlapItems } from '../shared/format';
 import { OverlapLabel } from '../shared/OverlapLabel';
 import type { AnalysisResult, PointResult } from '../shared/types';
@@ -30,6 +31,10 @@ export function ParcelPopup({ data, onShowPanel, onShowOverlaps }: {
     const surveyCount = (data.surveys || []).length;
     const hiddenCount = realItems.length - POPUP_ITEM_LIMIT;
     const risk = buildRisk(data);
+    // 다른 토지 규제 중 공사를 크게 막는 것만 한 줄로
+    const landRules = data.landUse
+        ? buildLandGuidance(data.landUse, parcel.jibun).rules.filter(rule => rule.level === 'required')
+        : [];
 
     let title;
     let summary;
@@ -80,6 +85,9 @@ export function ParcelPopup({ data, onShowPanel, onShowOverlaps }: {
             {nearest && <p style={note12}>가장 가까운 문화유적: {nearest.name} · 약 {nearest.distance}m</p>}
             {surveyCount > 0 && (
                 <p style={{ ...note12, margin: '2px 0 0 0' }}>주변 500m 조사 이력 {surveyCount}건{surveyCount >= 10 ? ' 이상' : ''}</p>
+            )}
+            {landRules.length > 0 && (
+                <p style={{ ...note12, margin: '2px 0 0 0' }}>다른 토지 규제: <b>{landRules.map(rule => rule.title).join(', ')}</b></p>
             )}
             {failed && <FailNote />}
             <button type="button" className="go-panel" onClick={onShowPanel}>해야 할 일 보기 ▼</button>

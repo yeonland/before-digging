@@ -1,6 +1,7 @@
-// 결과 패널 아래쪽: 해야 할 일, 굴착 깊이, 비용, 주변 유적·조사 이력, 문의처, 알아두세요
+// 결과 패널 아래쪽: 해야 할 일, 다른 토지 규제, 굴착 깊이, 비용, 주변 유적·조사 이력, 문의처, 알아두세요
 import type { Guidance } from './guidance.js';
 import { findDepartment, officeName, type DepartmentData } from './departments';
+import { LandUseSection } from './LandUseSection';
 import { addressDistrict, addressDong, reportSearchWord, REPORT_SEARCH_URL, STATUS_SEARCH_URL } from './links';
 import type { Agency, AnalysisResult, Elevation, Survey } from '../shared/types';
 
@@ -179,9 +180,10 @@ function ContactSection({ address, departments }: { address?: string; department
     );
 }
 
-export function ResultSections({ data, guidance, ground, depth, elevation, departments, onUseBorehole }: {
+export function ResultSections({ data, guidance, landArea, ground, depth, elevation, departments, onUseBorehole }: {
     data: AnalysisResult;
     guidance: Guidance;
+    landArea: number | null;
     ground: number | null;
     depth: number | null;
     elevation: Elevation | null;
@@ -208,6 +210,8 @@ export function ResultSections({ data, guidance, ground, depth, elevation, depar
                     <LawDetails law={step.law} />
                 </div>
             ))}
+
+            <LandUseSection data={data} landArea={landArea} />
 
             <ExcavationSection ground={ground} depth={depth} elevation={elevation} data={data} onUseBorehole={onUseBorehole} />
 
