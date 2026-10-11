@@ -48,7 +48,7 @@ function ExcavationSection({ ground, depth, elevation, data, onUseBorehole }: {
                 <div className="step-title">굴착 바닥 해발 약 {bottom}m</div>
                 <div>지반 해발 {ground}m에서 {depth}m를 파면 바닥은 해발 약 {bottom}m예요. 주변 발굴조사에서 유구(유적의 흔적)가 나온 해발이 이보다 높으면, 공사가 유적층에 닿을 수 있어요.</div>
                 <StepItems items={[
-                    '주변 유적이 어느 해발에서 나왔는지는 아래 "주변 조사 이력"의 보고서나 조사기관에 확인해 보세요. 이 서비스는 아직 유적층 해발 자료가 없어요.',
+                    '주변 유적이 어느 해발에서 나왔는지는 "주변 자료" 탭의 조사 보고서나 조사기관에 확인해 보세요. 이 서비스는 아직 유적층 해발 자료가 없어요.',
                     '얕게 파는 공사라도 유존지역 안이면 국가유산영향진단 대상인 것은 같아요. 굴착 깊이는 진단·협의 때 참고 자료가 돼요.'
                 ]} />
             </>

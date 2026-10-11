@@ -267,7 +267,7 @@ function buildGuidance(result, input) {
         const followUps = site.followUps || [];
         const shown = followUps.slice(0, 3).map(surveyLabel).join(', ');
         const followUpText = followUps.length > 0
-            ? ` 같은 범위에서 그 뒤에 ${shown}${followUps.length > 3 ? ` 외 ${followUps.length - 3}건의` : ''} 기록이 있어요. 그 조사 결과도 함께 확인해 보세요. 아래 "주변 조사 이력"의 "보고서 찾기"로 국가유산청 보고서 목록을 열 수 있어요.`
+            ? ` 같은 범위에서 그 뒤에 ${shown}${followUps.length > 3 ? ` 외 ${followUps.length - 3}건의` : ''} 기록이 있어요. 그 조사 결과도 함께 확인해 보세요. "주변 자료" 탭의 "보고서 찾기"로 국가유산청 보고서 목록을 열 수 있어요.`
             : ' 같은 범위에서 그 뒤에 한 표본·시굴·발굴조사 기록은 찾지 못했어요.';
         steps.push({
             level: 'check',
@@ -308,7 +308,7 @@ function buildGuidance(result, input) {
         steps.push({
             level: 'info',
             title: '이 필지에 예전 조사 기록이 있어요',
-            body: `필지에 걸친 ${main.method} 기록이 있어요: '${main.name}'${main.year ? ` (${main.year}년)` : ''}${others > 0 ? ` 외 ${others}건` : ''}. 예전 조사 결과에 따라 필요한 절차가 달라질 수 있으니, 보고서 내용을 확인하고 관할 시·군·구에 문의해 보세요. 조사 목록은 아래 "주변 조사 이력"에서 볼 수 있어요.`,
+            body: `필지에 걸친 ${main.method} 기록이 있어요: '${main.name}'${main.year ? ` (${main.year}년)` : ''}${others > 0 ? ` 외 ${others}건` : ''}. 예전 조사 결과에 따라 필요한 절차가 달라질 수 있으니, 보고서 내용을 확인하고 관할 시·군·구에 문의해 보세요. 조사 목록은 "주변 자료" 탭에서 볼 수 있어요.`,
             law: null
         });
     }
@@ -501,7 +501,7 @@ function buildRisk(result) {
     }
     const nearbyExcavations = result.surveyStats ? result.surveyStats.excavationsWithin200 : null;
     if (nearbyExcavations > 0) {
-        reasons.push(`(참고) 주변 ${RISK.excavationRadius}m 안에서 발굴·시굴조사가 ${nearbyExcavations}건 있었어요. 등급에는 넣지 않았으니, 아래 "주변 조사 이력"에서 어떤 유적이 나왔는지 확인해 보세요`);
+        reasons.push(`(참고) 주변 ${RISK.excavationRadius}m 안에서 발굴·시굴조사가 ${nearbyExcavations}건 있었어요. 등급에는 넣지 않았으니, "주변 자료" 탭의 조사 이력에서 어떤 유적이 나왔는지 확인해 보세요`);
     }
     if (area.naturalNames.length > 0) {
         reasons.push(`(참고) 자연유산 구역에 걸쳐요 ('${area.naturalNames.join("', '")}'). 등급에는 넣지 않았어요`);

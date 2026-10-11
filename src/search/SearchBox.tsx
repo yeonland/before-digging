@@ -10,9 +10,10 @@ type ListState =
     | { kind: 'message'; text: string }
     | { kind: 'results'; results: SearchResult[]; heading?: string };
 
-export function SearchBox({ onGo, onDxfFile }: {
+export function SearchBox({ onGo, onDxfFile, onHelp }: {
     onGo: (result: SearchResult) => void;
     onDxfFile: (file: File) => void;
+    onHelp: () => void;
 }) {
     const [keyword, setKeyword] = useState('');
     const [list, setList] = useState<ListState>({ kind: 'hidden' });
@@ -111,13 +112,14 @@ export function SearchBox({ onGo, onDxfFile }: {
                 <input
                     type="text"
                     id="address-input"
-                    placeholder="지번, 도로명, 장소 또는 좌표 (예: 경주시 인왕동 815-1)"
+                    placeholder="주소·지번·장소·좌표 (예: 경주시 인왕동 815-1)"
                     value={keyword}
                     onChange={event => setKeyword(event.target.value)}
                     onKeyUp={event => { if (event.key === 'Enter') search(); }}
                 />
                 <button id="search-btn" onClick={search}>검색</button>
                 <button id="dxf-btn" type="button" title="DXF 도면으로 사업부지 전체 진단" onClick={() => fileInput.current?.click()}>도면(DXF)</button>
+                <button id="help-btn" type="button" title="사용설명서" aria-label="사용설명서" onClick={onHelp}>?</button>
                 <input
                     id="dxf-input"
                     ref={fileInput}

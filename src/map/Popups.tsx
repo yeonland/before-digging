@@ -90,7 +90,7 @@ export function ParcelPopup({ data, onShowPanel, onShowOverlaps }: {
                 <p style={{ ...note12, margin: '2px 0 0 0' }}>다른 토지 규제: <b>{landRules.map(rule => rule.title).join(', ')}</b></p>
             )}
             {failed && <FailNote />}
-            <button type="button" className="go-panel" onClick={onShowPanel}>해야 할 일 보기 ▼</button>
+            <button type="button" className="go-panel" onClick={onShowPanel}>결과 자세히 보기 ▼</button>
         </div>
     );
 }

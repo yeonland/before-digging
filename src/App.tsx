@@ -15,6 +15,7 @@ import { loadDxfSite } from './site/loadDxfSite';
 import { fetchAddresses, getJson } from './shared/api';
 import { Loading } from './shared/Loading';
 import { Sidebar, type SheetState } from './shared/Sidebar';
+import { Help } from './help/Help';
 import type { AnalysisResult, PointResult, SiteResponse } from './shared/types';
 
 type Panel =
@@ -45,12 +46,21 @@ export default function App() {
     const [siteResponse, setSiteResponse] = useState<SiteResponse | null>(null);
     const [scrollTarget, setScrollTarget] = useState<{ id: string } | null>(null);
     const [sheet, setSheet] = useState<SheetState>('peek');
+    const [showHelp, setShowHelp] = useState(false); // 사용설명서를 결과 자리에 띄움 (닫으면 원래 내용)
 
     const sharedInputs = useRef<SharedLink | null>(null); // 공유 링크로 열었을 때 처음 한 번 채울 입력값
     const siteDraft = useRef<SiteDraft | null>(null);
     const panelId = useRef(0);
 
     const scrollTo = (id: string) => setScrollTarget({ id });
+
+    // 새 진단이나 도면 단계로 넘어가면 사용설명서를 닫음
+    useEffect(() => setShowHelp(false), [panel]);
+
+    function openHelp() {
+        setShowHelp(true);
+        scrollTo('result-panel');
+    }
 
     // 결과 패널(또는 그 안의 한 부분)을 보여줌. 휴대폰에서 시트가 접혀 있으면 반쯤 펼침
     useEffect(() => {
@@ -87,7 +97,8 @@ export default function App() {
         const controller = mapRef.current!;
         // 응답이 늦게 와도 이 클릭의 핀에만 결과를 넣도록 지역 변수로 보관
         const marker = controller.placeMarker(latlng);
-        marker.bindPopup('필지와 국가유산 데이터 확인 중...', { maxWidth: 320 }).openPopup();
+        // 팝업이 지도 위 검색창에 가리지 않게 위쪽 여백을 두고 지도를 옮김
+        marker.bindPopup('필지와 국가유산 데이터 확인 중...', { maxWidth: 320, autoPanPaddingTopLeft: [12, 76] }).openPopup();
         setShareLocation(latlng);
         setPanel({ kind: 'message', title: '진단 결과', text: '필지와 국가유산 데이터를 확인하는 중이에요...', loadingSince: Date.now() });
 
@@ -255,7 +266,7 @@ export default function App() {
 
         setShareLocation(null);
         showResultPanel(siteData, {
-            title: '도면 사업부지 진단 결과 · 해야 할 일',
+            title: '도면 사업부지 진단 결과',
             areaLabel: '부지 면적',
             siteTable: true,
             shareable: false,
@@ -372,11 +383,13 @@ export default function App() {
         <div className="app">
             <div className="map-area">
                 <div id="map" ref={mapElement} />
-                <SearchBox onGo={result => diagnoseAt({ lat: result.lat, lng: result.lng })} onDxfFile={handleDxfFile} />
+                <SearchBox onGo={result => diagnoseAt({ lat: result.lat, lng: result.lng })} onDxfFile={handleDxfFile} onHelp={openHelp} />
             </div>
             <Sidebar sheet={sheet} onSheetChange={setSheet} scrollRef={sidebarElement}>
                 {/* 진단 결과 패널: 아무것도 고르지 않았으면 사용 안내 */}
-                <section id="result-panel" ref={panelElement}>{panelContent || <Intro />}</section>
+                <section id="result-panel" ref={panelElement}>
+                    {showHelp ? <Help onClose={() => setShowHelp(false)} /> : panelContent || <Intro onHelp={openHelp} />}
+                </section>
                 <p id="data-source">
                     출처: 국가유산청 국가유산 공간정보서비스(문화유적분포지도, 국가유산조사구역), 국토교통부 브이월드(국가유산 지정/보호구역, 지적도, 토지이용계획), OpenStreetMap
                 </p>
@@ -386,7 +399,7 @@ export default function App() {
 }
 
 // 처음 열었을 때 결과 자리에 보여주는 사용 안내
-function Intro() {
+function Intro({ onHelp }: { onHelp: () => void }) {
     return (
         <div className="intro">
             <h3>땅파기전</h3>
@@ -396,6 +409,7 @@ function Intro() {
                 <li>그 필지의 <b>국가유산 위험도</b>, 해야 할 일, 비용, <b>다른 토지 규제</b>를 보여줘요.</li>
                 <li>사업부지가 여러 필지면 <b>도면(DXF)</b>을 올려 한 번에 진단할 수 있어요.</li>
             </ol>
+            <button type="button" className="go-panel" onClick={onHelp}>사용설명서 보기</button>
             <p className="disclaimer">공공데이터와 법령을 바탕으로 한 참고자료이며 법적 판단을 대신하지 않아요.</p>
         </div>
     );
