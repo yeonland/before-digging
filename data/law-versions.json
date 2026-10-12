@@ -79,5 +79,113 @@
     "promulgationDate": "20250605",
     "promulgationNo": "00604",
     "revisionType": "일부개정"
+  },
+  "국토의 계획 및 이용에 관한 법률": {
+    "mst": "284013",
+    "lawId": "009294",
+    "kind": "법률",
+    "effectiveDate": "20260701",
+    "promulgationDate": "20260305",
+    "promulgationNo": "21447",
+    "revisionType": "타법개정"
+  },
+  "국토의 계획 및 이용에 관한 법률 시행령": {
+    "mst": "288857",
+    "lawId": "009419",
+    "kind": "대통령령",
+    "effectiveDate": "20260918",
+    "promulgationDate": "20260818",
+    "promulgationNo": "36587",
+    "revisionType": "타법개정"
+  },
+  "개발제한구역의 지정 및 관리에 관한 특별조치법": {
+    "mst": "286509",
+    "lawId": "002018",
+    "kind": "법률",
+    "effectiveDate": "20260602",
+    "promulgationDate": "20260602",
+    "promulgationNo": "21738",
+    "revisionType": "타법개정"
+  },
+  "농지법": {
+    "mst": "284301",
+    "lawId": "000479",
+    "kind": "법률",
+    "effectiveDate": "20260918",
+    "promulgationDate": "20260317",
+    "promulgationNo": "21462",
+    "revisionType": "타법개정"
+  },
+  "산지관리법": {
+    "mst": "289913",
+    "lawId": "009412",
+    "kind": "법률",
+    "effectiveDate": "20260922",
+    "promulgationDate": "20260922",
+    "promulgationNo": "21960",
+    "revisionType": "일부개정"
+  },
+  "수도법": {
+    "mst": "284311",
+    "lawId": "001818",
+    "kind": "법률",
+    "effectiveDate": "20260918",
+    "promulgationDate": "20260317",
+    "promulgationNo": "21462",
+    "revisionType": "타법개정"
+  },
+  "군사기지 및 군사시설 보호법": {
+    "mst": "258703",
+    "lawId": "010596",
+    "kind": "법률",
+    "effectiveDate": "20240717",
+    "promulgationDate": "20240116",
+    "promulgationNo": "20015",
+    "revisionType": "일부개정"
+  },
+  "자연공원법": {
+    "mst": "288003",
+    "lawId": "001837",
+    "kind": "법률",
+    "effectiveDate": "20260707",
+    "promulgationDate": "20260707",
+    "promulgationNo": "21848",
+    "revisionType": "일부개정"
+  },
+  "하천법": {
+    "mst": "284435",
+    "lawId": "001836",
+    "kind": "법률",
+    "effectiveDate": "20260918",
+    "promulgationDate": "20260317",
+    "promulgationNo": "21471",
+    "revisionType": "일부개정"
+  },
+  "사방사업법": {
+    "mst": "268865",
+    "lawId": "000398",
+    "kind": "법률",
+    "effectiveDate": "20260201",
+    "promulgationDate": "20250131",
+    "promulgationNo": "20751",
+    "revisionType": "타법개정"
+  },
+  "도시공원 및 녹지 등에 관한 법률": {
+    "mst": "273419",
+    "lawId": "001813",
+    "kind": "법률",
+    "effectiveDate": "20260827",
+    "promulgationDate": "20250826",
+    "promulgationNo": "21039",
+    "revisionType": "일부개정"
+  },
+  "부동산 거래신고 등에 관한 법률": {
+    "mst": "259641",
+    "lawId": "012480",
+    "kind": "법률",
+    "effectiveDate": "20240517",
+    "promulgationDate": "20240206",
+    "promulgationNo": "20194",
+    "revisionType": "타법개정"
   }
 }
