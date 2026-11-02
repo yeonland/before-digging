@@ -27,22 +27,22 @@
     "revisionType": "타법개정"
   },
   "매장유산 보호 및 조사에 관한 법률": {
-    "mst": "285661",
+    "mst": "285641",
     "lawId": "011152",
     "kind": "법률",
-    "effectiveDate": "20260517",
+    "effectiveDate": "20261029",
     "promulgationDate": "20260428",
-    "promulgationNo": "21585",
-    "revisionType": "타법개정"
+    "promulgationNo": "21589",
+    "revisionType": "일부개정"
   },
   "매장유산 보호 및 조사에 관한 법률 시행령": {
-    "mst": "285999",
+    "mst": "291477",
     "lawId": "011339",
     "kind": "대통령령",
-    "effectiveDate": "20260517",
-    "promulgationDate": "20260512",
-    "promulgationNo": "36324",
-    "revisionType": "타법개정"
+    "effectiveDate": "20261029",
+    "promulgationDate": "20261027",
+    "promulgationNo": "36793",
+    "revisionType": "일부개정"
   },
   "매장유산 보호 및 조사에 관한 법률 시행규칙": {
     "mst": "288507",
