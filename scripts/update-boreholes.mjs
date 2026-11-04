@@ -14,6 +14,7 @@ import { gzipSync } from 'node:zlib';
 import proj4 from 'proj4';
 
 const DATASET_PAGE = 'https://www.data.go.kr/data/15069365/fileData.do';
+const INFO_URL = 'https://www.data.go.kr/tcs/dss/selectFileDataDownload.do';
 const DOWNLOAD_URL = 'https://www.data.go.kr/cmm/cmm/fileDownload.do';
 const OUTPUT_FILE = new URL('../data/boreholes.bin.gz', import.meta.url);
 const META_FILE = new URL('../data/boreholes-meta.json', import.meta.url);
@@ -42,13 +43,28 @@ async function readMeta() {
     }
 }
 
-// 데이터 페이지에서 지금 올라와 있는 파일 번호와 수정일을 찾아 내려받음
+// 데이터 페이지의 다운로드 버튼 값으로 파일 정보를 물어본 뒤 내려받음
+// (2026-11: 페이지에 파일 번호가 직접 나오지 않고, 버튼을 누르면 selectFileDataDownload.do가 알려줌)
 async function download() {
     const page = await (await fetch(DATASET_PAGE)).text();
-    const fileId = (page.match(/atchFileId=(FILE_\d+)/) || [])[1];
-    const detail = (page.match(/fileDetailSn=(\d+)/) || [])[1] || '1';
-    const modified = (page.match(/수정일\s*<\/th>\s*<td[^>]*>\s*([\d-]+)/) || page.match(/수정일[^\d]{0,80}(\d{4}-\d{2}-\d{2})/) || [])[1] || null;
-    if (!fileId) throw new Error('데이터 페이지에서 파일 번호를 찾지 못했어요. 페이지 구조가 바뀌었는지 확인하세요.');
+    const button = page.match(/fn_fileDataDown\('(\d+)',\s*'([^']+)',\s*'([^']*)',\s*'(\d+)'/);
+    if (!button) throw new Error('데이터 페이지에서 다운로드 버튼을 찾지 못했어요. 페이지 구조가 바뀌었는지 확인하세요.');
+
+    const info = await (await fetch(INFO_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            publicDataPk: button[1],
+            publicDataDetailPk: button[2],
+            atchFileId: button[3],
+            fileDetailSn: button[4],
+            publicDataTyCode: 'PR0051'
+        })
+    })).json();
+    const fileId = info.status === true && info.atchFileId;
+    if (!fileId) throw new Error('공공데이터포털이 파일 번호를 알려주지 않았어요. 다운로드 방식이 바뀌었는지 확인하세요.');
+    const detail = info.fileDetailSn || '1';
+    const modified = ((info.dataSetFileDetailInfo || {}).updtDt || '').slice(0, 10) || null;
 
     const response = await fetch(`${DOWNLOAD_URL}?atchFileId=${fileId}&fileDetailSn=${detail}`);
     if (!response.ok) throw new Error(`시추공 파일 내려받기 실패: ${response.status}`);
