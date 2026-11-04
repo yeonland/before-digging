@@ -164,7 +164,7 @@ const RULES: RuleDef[] = [
         level: 'check',
         title: items => joinNames(items),
         body: '정해진 높이(위탁고도) 이상의 건물을 지으려면 관할 부대와 협의해야 해요. 이름 옆 괄호에 위탁고도가 있으면 그 높이를 기준으로 봐요.',
-        law: '군사기지 및 군사시설 보호법 제11조, 제13조'
+        law: '군사기지 및 군사시설 보호법 제7조, 제13조'
     },
     {
         match: named('하천구역'),

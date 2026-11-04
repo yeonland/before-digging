@@ -27,6 +27,15 @@ if (!table) {
     throw new Error('회원기관 표를 찾지 못했어요. 페이지 구조가 바뀌었는지 확인하세요.');
 }
 
+// 원본 주소 끝의 공백을 지우고 한글 도메인은 퓨니코드로 바꿈 (화면의 encodeURI가 한글 도메인을 망가뜨림)
+function cleanHomepage(url) {
+    try {
+        return url ? new URL(url.trim()).href : null;
+    } catch {
+        return null;
+    }
+}
+
 const agencies = [...table.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)]
     .map(([, row]) => [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((cell) => cell[1]))
     .filter((cells) => cells.length >= 5)
@@ -34,7 +43,7 @@ const agencies = [...table.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)]
         name: cellText(name),
         address: cellText(address).replace(/^本\)\s*/, ''),
         phone: cellText(phone),
-        homepage: (home.match(/href='([^']+)'/) || home.match(/href="([^"]+)"/) || [])[1] || null
+        homepage: cleanHomepage((home.match(/href='([^']+)'/) || home.match(/href="([^"]+)"/) || [])[1])
     }));
 
 if (agencies.length < 50) {
